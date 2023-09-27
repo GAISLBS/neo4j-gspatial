@@ -52,6 +52,6 @@ public final class SpatialOperationConstants {
 
     public static boolean isTopologyOperation(String operationName) {
         return Arrays.asList("CONTAINS", "COVERS", "COVERED_BY", "CROSSES", "DISJOINT", "EQUALS", "INTERSECTS", "OVERLAPS", "TOUCHES", "WITHIN")
-                .contains(operationName);
+                .contains(operationName.toUpperCase());
     }
 }

@@ -11,7 +11,7 @@ public class GeohashUtility {
         if (geometry.getGeometryType().equals("Point")) {
             var lat = geometry.getCoordinate().y;
             var lon = geometry.getCoordinate().x;
-            return GeoHash.encodeHash(lat, lon);
+            return GeoHash.encodeHash(lat, lon, 9);
         } else {
             Envelope envelope = geometry.getEnvelopeInternal();
             double topLeftLat = envelope.getMaxY();

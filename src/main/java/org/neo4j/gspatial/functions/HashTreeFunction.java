@@ -4,8 +4,8 @@ import org.neo4j.graphdb.*;
 import org.neo4j.gspatial.utils.GeohashUtility;
 import org.neo4j.gspatial.utils.GeometryUtility;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+
 
 public class HashTreeFunction {
 
@@ -13,6 +13,7 @@ public class HashTreeFunction {
     private static final String GEOHASH_PROPERTY = "geohash";
     private static final String INDEX_OF_REL_TYPE = "INDEX_OF";
     private static final String CHILD_OF_REL_TYPE = "CHILD_OF";
+    private static final String GEOMETRY_PROPERTY = "geometry";
     private static final int MAX_GEOHASH_LENGTH = 12;
     private final Transaction tx;
 
@@ -22,20 +23,19 @@ public class HashTreeFunction {
 
     public Node setHashTree(String label, long geometryIdx, String wkt) {
         Node geometryNode = findGeometryNode(label, geometryIdx);
-        if (geometryNode == null) {
-            throw new IllegalArgumentException("Node cannot be null");
-        }
-
         String geohash = GeohashUtility.generateGeohash(wkt);
         Node hashNode = findOrCreateHashNode(geohash);
         createOrSkipRelationship(geometryNode, hashNode, INDEX_OF_REL_TYPE);
         manageChildOfRelationships(hashNode, geohash);
-
         return hashNode;
     }
 
-    private Node findGeometryNode(String label, long geometryIdx) {
-        return tx.findNode(Label.label(label), "idx", geometryIdx);
+    private Node findGeometryNode(String label, long idx) {
+        Node node = tx.findNode(Label.label(label), "idx", idx);
+        if (node == null) {
+            throw new IllegalArgumentException("Node cannot be null");
+        }
+        return node;
     }
 
     private Node findOrCreateHashNode(String geohash) {
@@ -76,8 +76,8 @@ public class HashTreeFunction {
             Node ancestorNode = findOrCreateHashNode(ancestorGeohash);
             if (ancestorNode != null) {
                 createOrSkipRelationship(ancestorNode, hashNode, CHILD_OF_REL_TYPE);
-                break;
             }
+            hashNode = ancestorNode;
             ancestorGeohash = ancestorGeohash.substring(0, ancestorGeohash.length() - 1);
         }
     }
@@ -110,13 +110,12 @@ public class HashTreeFunction {
         if (args.size() < 2) {
             throw new IllegalArgumentException("At least two nodes are required for relationship checks.");
         }
-        List<String> downRelOperations = Arrays.asList("CONTAINS", "COVERS");
 
         Node node1 = (Node) args.get(0);
         Node node2 = (Node) args.get(1);
 
-        args.set(0, GeometryUtility.parseWKT((String) node1.getProperty("geometry")));
-        args.set(1, GeometryUtility.parseWKT((String)node2.getProperty("geometry")));
+        args.set(0, GeometryUtility.parseWKT((String) node1.getProperty(GEOMETRY_PROPERTY)));
+        args.set(1, GeometryUtility.parseWKT((String) node2.getProperty(GEOMETRY_PROPERTY)));
 
         Node geohashNode1 = findGeohashNode(node1);
         Node geohashNode2 = findGeohashNode(node2);
@@ -124,40 +123,69 @@ public class HashTreeFunction {
         if (geohashNode1 == null || geohashNode2 == null) {
             return args;
         }
-        boolean isRelated;
-        if (geohashNode1.equals(geohashNode2)) {
-            isRelated = true;
-        } else {
-            if (operationName.equals("EQUALS")){
-                isRelated = false;
-            }
-
-
-
-            else if (downRelOperations.contains(operationName)) {
-                isRelated = checkChildOfRelationship(geohashNode1, geohashNode2);
-            } else {
-                isRelated = checkChildOfRelationship(geohashNode2, geohashNode1);
-            }
-        }
+        boolean isRelated = checkGeoHashRelation(geohashNode1, geohashNode2, operationName.toUpperCase());
         if (!isRelated) {
             args.add(2, false);
         }
         return args;
     }
 
-    private static boolean checkNear(Node geohashNode1, Node geohashNode2){
+    private static boolean checkGeoHashRelation(Node node1, Node node2, String operationName) {
+        return switch (operationName) {
+            case "EQUALS" -> node1.equals(node2);
+            case "CONTAINS", "COVERS" -> node1.equals(node2) || checkDescendant(node1, node2);
+            case "WITHIN", "COVERED_BY" -> node1.equals(node2) || checkDescendant(node2, node1);
+            case "CROSSES", "OVERLAPS", "TOUCHES", "INTERSECTS", "DISJOINT" ->
+                    node1.equals(node2) || checkNear(node1, node2) || checkDescendant(node1, node2) || checkDescendant(node2, node1);
+            default -> throw new IllegalArgumentException("Invalid operation name");
+        };
+    }
+
+    private static boolean checkNear(Node geohashNode1, Node geohashNode2) {
+        String geohash1 = (String) geohashNode1.getProperty(GEOHASH_PROPERTY);
+        String geohash2 = (String) geohashNode2.getProperty(GEOHASH_PROPERTY);
+        if (geohash1.length() != geohash2.length()) {
+            return false;
+        }
+        String truncatedGeohash1 = geohash1.substring(0, geohash1.length() - 1);
+        String truncatedGeohash2 = geohash2.substring(0, geohash2.length() - 1);
+        if (!truncatedGeohash1.equals(truncatedGeohash2)) {
+            return false;
+        }
+        String[] possibleLastCharacters = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "b", "c", "d", "e", "f", "g", "h", "j", "k", "m", "n", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"};
+        String lastCharOfGeohash2 = geohash2.substring(geohash2.length() - 1);
+        for (String lastChar : possibleLastCharacters) {
+            if (lastChar.equals(lastCharOfGeohash2)) {
+                return true;
+            }
+        }
         return false;
     }
 
     private static Node findGeohashNode(Node node) {
-        for (Relationship r : node.getRelationships(RelationshipType.withName("INDEX_OF"))) {
+        for (Relationship r : node.getRelationships(RelationshipType.withName(INDEX_OF_REL_TYPE))) {
             return r.getOtherNode(node);
         }
         return null;
     }
 
-    private static boolean checkChildOfRelationship(Node parentNode, Node childNode) {
-        return relationshipExists(parentNode, childNode, CHILD_OF_REL_TYPE);
+    private static boolean checkDescendant(Node parentNode, Node childNode) {
+        Set<Node> visitedNodes = new HashSet<>();
+        Queue<Node> queue = new LinkedList<>();
+        queue.add(parentNode);
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+            if (!visitedNodes.add(current)) {
+                continue;
+            }
+            for (Relationship r : current.getRelationships(RelationshipType.withName(CHILD_OF_REL_TYPE))) {
+                Node possibleChild = r.getOtherNode(current);
+                if (possibleChild.equals(childNode)) {
+                    return true;
+                }
+                queue.add(possibleChild);
+            }
+        }
+        return false;
     }
 }
