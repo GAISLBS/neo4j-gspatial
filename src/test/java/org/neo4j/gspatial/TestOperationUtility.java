@@ -9,13 +9,26 @@ import org.neo4j.gspatial.utils.GeometryUtility;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * This class provides utility methods for executing and verifying spatial operations in tests.
+ */
 public class TestOperationUtility {
-
+    /**
+     * Enum representing various categories of spatial operations.
+     * Each category is associated with a set of operations and a method for generating a Cypher query for the operations.
+     */
     public enum OperationCategory {
         TOPOLOGY, SET, DUAL_ARG, PARAM;
 
+        /**
+         * Checks if the given operation belongs to this category.
+         *
+         * @param operation the name of the operation
+         * @return true if the operation belongs to this category, false otherwise
+         */
         public boolean containsOperation(String operation) {
             return switch (this) {
                 case TOPOLOGY ->
@@ -26,6 +39,14 @@ public class TestOperationUtility {
             };
         }
 
+        /**
+         * Generates a Cypher query for the given operation and arguments.
+         *
+         * @param nodeType1 the type of the first node
+         * @param nodeType2 the type of the second node or a parameter for the operation
+         * @param operation the name of the operation
+         * @return the generated Cypher query
+         */
         public String generateQuery(String nodeType1, String nodeType2, String operation) {
             return switch (this) {
                 case TOPOLOGY ->
@@ -36,6 +57,16 @@ public class TestOperationUtility {
             };
         }
 
+        /**
+         * Builds a Cypher query for a spatial operation.
+         *
+         * @param nodeType1  the type of the first node
+         * @param nodeType2  the type of the second node
+         * @param operation  the name of the operation
+         * @param conditions the conditions for the WHERE clause
+         * @param returns    the expressions for the RETURN clause
+         * @return the generated Cypher query
+         */
         private String buildOperationQuery(String nodeType1, String nodeType2, String operation, String conditions, String returns) {
             return String.format(
                     """
@@ -49,6 +80,14 @@ public class TestOperationUtility {
                     nodeType1, nodeType2, operation, conditions, returns);
         }
 
+        /**
+         * Builds a Cypher query for a set operation.
+         *
+         * @param nodeType1 the type of the first node
+         * @param nodeType2 the type of the second node
+         * @param operation the name of the operation
+         * @return the generated Cypher query
+         */
         private String buildSetOperationQuery(String nodeType1, String nodeType2, String operation) {
             return String.format(
                     """
@@ -63,6 +102,15 @@ public class TestOperationUtility {
                     nodeType1, nodeType2, operation);
         }
 
+        /**
+         * Builds a Cypher query for a spatial operation that requires a parameter.
+         *
+         * @param nodeType1 the type of the node
+         * @param nodeType2 the parameter for the operation
+         * @param operation the name of the operation
+         * @return the generated Cypher query
+         * @throws IllegalArgumentException if nodeType2 cannot be converted to a Double
+         */
         private String buildParamOperationQuery(String nodeType1, String nodeType2, String operation) {
             try {
                 double param = Double.parseDouble(nodeType2);
@@ -79,17 +127,33 @@ public class TestOperationUtility {
         }
     }
 
+    /**
+     * Executes the given spatial operation with the given arguments and verifies the results.
+     *
+     * @param driver      the Neo4j driver
+     * @param inputArg1   the type of the first node or a WKT string
+     * @param inputArg2   the type of the second node, a WKT string, or a parameter for the operation
+     * @param operation   the name of the operation
+     * @param singleInput true if the operation requires a single input, false otherwise
+     */
     public static void executeOperation(Driver driver, String inputArg1, String inputArg2, String operation, boolean singleInput) {
         List<Map<String, Object>> results = singleInput
                 ? executeSingleInputSpatialQuery(driver, inputArg1, operation)
                 : executeDualInputSpatialQuery(driver, inputArg1, inputArg2, operation);
 
-//        CSVWriter csvWriter = new CSVWriter();
-//        csvWriter.write("neo_" + operation + ".csv", results);
+        CSVWriter csvWriter = new CSVWriter();
+        csvWriter.write("neo_" + operation + ".csv", results);
 
         verifyResults(results, operation);
     }
 
+    /**
+     * Executes the provided Cypher query and returns the results as a list of maps.
+     *
+     * @param driver      the Neo4j driver
+     * @param cypherQuery the Cypher query to execute
+     * @return a list of maps representing the results of the query
+     */
     private static List<Map<String, Object>> executeQuery(Driver driver, String cypherQuery) {
         try (Session session = driver.session()) {
             return session.run(cypherQuery).list().stream()
@@ -98,17 +162,41 @@ public class TestOperationUtility {
         }
     }
 
+    /**
+     * Executes a spatial operation that requires a single input and returns the results.
+     *
+     * @param driver    the Neo4j driver
+     * @param nodeType  the type of the node
+     * @param operation the name of the operation
+     * @return a list of maps representing the results of the operation
+     */
     private static List<Map<String, Object>> executeSingleInputSpatialQuery(Driver driver, String nodeType, String operation) {
         String cypherQuery = String.format("MATCH (n:%s) CALL gspatial.operation('%s', [n.geometry]) YIELD result RETURN n.idx, result", nodeType, operation);
         return executeQuery(driver, cypherQuery);
     }
 
+    /**
+     * Executes a spatial operation that requires two inputs and returns the results.
+     *
+     * @param driver    the Neo4j driver
+     * @param nodeType1 the type of the first node
+     * @param nodeType2 the type of the second node or a parameter for the operation
+     * @param operation the name of the operation
+     * @return a list of maps representing the results of the operation
+     */
     private static List<Map<String, Object>> executeDualInputSpatialQuery(Driver driver, String nodeType1, String nodeType2, String operation) {
         OperationCategory category = determineOperationCategory(operation);
         String query = category.generateQuery(nodeType1, nodeType2, operation);
         return executeQuery(driver, query);
     }
 
+    /**
+     * Determines the category of the given operation.
+     *
+     * @param operation the name of the operation
+     * @return the category of the operation
+     * @throws IllegalArgumentException if the operation is not supported
+     */
     private static OperationCategory determineOperationCategory(String operation) {
         for (OperationCategory category : OperationCategory.values()) {
             if (category.containsOperation(operation)) {
@@ -118,10 +206,22 @@ public class TestOperationUtility {
         throw new IllegalArgumentException("Unsupported operation: " + operation);
     }
 
+    /**
+     * Converts a Record to a map.
+     *
+     * @param record the Record to convert
+     * @return a map representing the Record
+     */
     private static Map<String, Object> recordToMap(Record record) {
         return record.asMap();
     }
 
+    /**
+     * Verifies the results of a spatial operation against the expected results.
+     *
+     * @param results   the actual results of the operation
+     * @param operation the name of the operation
+     */
     private static void verifyResults(List<Map<String, Object>> results, String operation) {
         List<Map<String, Object>> expectedResults = TestIOUtility.loadDataForComparison("py_" + operation);
         sortAndNormalizeResults(results);
@@ -142,12 +242,23 @@ public class TestOperationUtility {
         }
     }
 
+    /**
+     * Sorts and normalizes the results of a spatial operation.
+     *
+     * @param results the results of the operation
+     */
     private static void sortAndNormalizeResults(List<Map<String, Object>> results) {
         results.sort(Comparator.comparing((Map<String, Object> map) -> (Long) map.getOrDefault("n.idx", Long.MIN_VALUE))
                 .thenComparing(map -> (Long) map.getOrDefault("m.idx", Long.MIN_VALUE)));
         results.replaceAll(TestOperationUtility::normalizeResult);
     }
 
+    /**
+     * Normalizes a result of a spatial operation.
+     *
+     * @param result the result to normalize
+     * @return a map representing the normalized result
+     */
     private static Map<String, Object> normalizeResult(Map<String, Object> result) {
         Map<String, Object> normalizedResult = new HashMap<>(result);
         Object value = result.get("result");
@@ -165,64 +276,5 @@ public class TestOperationUtility {
             }
         }
         return normalizedResult;
-    }
-
-    public static void executeHashTreeTest(Driver driver, String label) {
-        try (Session session = driver.session()) {
-            List<Map<String, Object>> dataList = fetchData(session, label);
-            setHashTrees(session, dataList);
-            verifyHashTrees(session, dataList);
-        }
-    }
-
-    public static void executeHashTree(Driver driver, String label) {
-        try (Session session = driver.session()) {
-            List<Map<String, Object>> dataList = fetchData(session, label);
-            setHashTrees(session, dataList);
-        }
-    }
-
-    private static List<Map<String, Object>> fetchData(Session session, String label) {
-        String fetchDataQuery = String.format("MATCH (n:%s) RETURN LABELS(n) as label, n.idx as geometryIdx, n.geometry as geom", label);
-        List<Record> records = session.run(fetchDataQuery).list();
-
-        return records.stream()
-                .map(TestOperationUtility::convertRecordToMap)
-                .toList();
-    }
-
-    private static Map<String, Object> convertRecordToMap(Record record) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("label", record.get("label").asList().stream().map(Object::toString).collect(Collectors.joining(",")));
-        map.put("geometryIdx", record.get("geometryIdx").asLong());
-        map.put("geom", record.get("geom").asString());
-        return map;
-    }
-
-    private static void setHashTrees(Session session, List<Map<String, Object>> dataList) {
-        String setHashTreeQuery = "CALL gspatial.setHashTree($dataList) YIELD result RETURN result";
-        session.run(setHashTreeQuery, Map.of("dataList", dataList));
-    }
-
-    private static void verifyHashTrees(Session session, List<Map<String, Object>> dataList) {
-        for (Map<String, Object> data : dataList) {
-            String label = data.get("label").toString();
-            long geometryNodeId = (long) data.get("geometryIdx");
-            String wkt = data.get("geom").toString();
-
-            verifyHashTree(session, label, geometryNodeId, wkt);
-        }
-    }
-
-    private static void verifyHashTree(Session session, String label, long geometryNodeId, String wkt) {
-        String checkRelationQuery = String.format("MATCH (g:%s)-[:INDEX_OF]->(h:HashTree) WHERE g.idx = $geometryNodeId RETURN h.geohash as geohash", label);
-        List<Record> records = session.run(checkRelationQuery, Map.of("geometryNodeId", geometryNodeId)).list();
-
-        if (records.isEmpty()) {
-            fail("Relationship between Hash node and Geometry node not found.");
-        }
-
-        String geohash = records.get(0).get("geohash").asString();
-        assertNotNull(geohash, "Geohash should not be null for WKT: " + wkt);
     }
 }

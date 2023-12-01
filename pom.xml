@@ -45,11 +45,6 @@
             <version>5.9.1</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.github.davidmoten</groupId>
-            <artifactId>geo</artifactId>
-            <version>0.8.0</version>
-        </dependency>
     </dependencies>
     <build>
         <plugins>

@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: org.neo4j.gspatial.SpatialFunctionsTest
 -------------------------------------------------------------------------------
-Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 37.78 s -- in org.neo4j.gspatial.SpatialFunctionsTest
+Tests run: 23, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 114.7 s -- in org.neo4j.gspatial.SpatialFunctionsTest
