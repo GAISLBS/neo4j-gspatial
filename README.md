@@ -1,4 +1,4 @@
-# gspatial - Neo4j Spatial Functions
+# gspatial - Neo4j Spatial Functions Plugin
 ## Overview
 'gspatial' is a plugin for the Neo4j database, specifically crafted for handling spatial data.
 This plugin is adept at performing a range of spatial operations on geometric objects, which are represented in the Well-Known Text (WKT) format.
@@ -14,7 +14,7 @@ We look forward to the community's contributions in enhancing and evolving this 
 ## Installation
 To install this plugin into your Neo4j database, follow the steps below:
 
-- Download the gspatial.jar file from /target/spatial-functions-1.0-SNAPSHOT.
+- Download the neo4j-gspatial.jar file from /target/ or release.
 - Copy the downloaded jar file to the plugins directory of your Neo4j installation.
 - Restart the Neo4j server.
 
