@@ -1,8 +1,0 @@
-org\neo4j\gspatial\constants\SpatialOperationConstants$SpatialOperation.class
-org\neo4j\gspatial\functions\SpatialOperationExecutor.class
-org\neo4j\gspatial\utils\GeometryUtility.class
-org\neo4j\gspatial\utils\IOUtility$Output.class
-org\neo4j\gspatial\constants\SpatialOperationConstants.class
-org\neo4j\gspatial\procedures\SpatialProcedures.class
-org\neo4j\gspatial\exceptions\ExceptionHandler.class
-org\neo4j\gspatial\utils\IOUtility.class
