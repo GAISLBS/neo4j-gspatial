@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This class provides utility methods for converting input and output for spatial operations.
+ * This class provides utility methods to convert input and output for spatial operations.
  * It includes methods for converting arguments and results to the appropriate format.
  */
 public class IOUtility {
@@ -30,7 +30,7 @@ public class IOUtility {
     }
 
     /**
-     * Converts the given argument to the appropriate format for spatial operations.
+     * Converts the given argument for spatial operations based on its type.
      * If the argument is a Node, it is converted using the convertNode method.
      * If the argument is a String, it is converted to a Geometry object using the GeometryUtility.parseWKT method.
      * If the argument is a Double and the operation is BUFFER, the argument is returned as is.

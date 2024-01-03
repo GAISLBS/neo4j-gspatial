@@ -36,6 +36,7 @@ public final class SpatialOperationConstants {
         LENGTH(args -> ((Geometry) args.get(0)).getLength(), 1),
         OVERLAPS(args -> ((Geometry) args.get(0)).overlaps((Geometry) args.get(1)), 2),
         SRID(args -> ((Geometry) args.get(0)).getSRID(), 1),
+        SYM_DIFFERENCE(args -> ((Geometry) args.get(0)).symDifference((Geometry) args.get(1)), 2),
         TOUCHES(args -> ((Geometry) args.get(0)).touches((Geometry) args.get(1)), 2),
         UNION(args -> ((Geometry) args.get(0)).union((Geometry) args.get(1)), 2),
         WITHIN(args -> ((Geometry) args.get(0)).within((Geometry) args.get(1)), 2);
