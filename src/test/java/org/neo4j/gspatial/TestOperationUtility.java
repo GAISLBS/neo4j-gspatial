@@ -85,7 +85,7 @@ public class TestOperationUtility {
          *
          * @param nodeType1 the type of the first node
          * @param nodeType2 the type of the second node
-         * @param operation the name of the operation
+         * @param operation the name of the set operation
          * @return the generated Cypher query
          */
         private String buildSetOperationQuery(String nodeType1, String nodeType2, String operation) {
@@ -151,7 +151,7 @@ public class TestOperationUtility {
      * Executes the provided Cypher query and returns the results as a list of maps.
      *
      * @param driver      the Neo4j driver
-     * @param cypherQuery the Cypher query to execute
+     * @param cypherQuery the Cypher query to be executed
      * @return a list of maps representing the results of the query
      */
     private static List<Map<String, Object>> executeQuery(Driver driver, String cypherQuery) {

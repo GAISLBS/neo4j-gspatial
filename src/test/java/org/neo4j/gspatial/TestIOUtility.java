@@ -26,7 +26,7 @@ class CSVResult {
 }
 
 /**
- * This class provides a method for reading a CSV file.
+ * This class provides utility methods for reading a CSV file.
  * It includes a method for reading a CSV file into a CSVResult object.
  */
 class CSVReader {
@@ -79,7 +79,7 @@ class CSVReader {
 }
 
 /**
- * This class provides a method for writing data to a CSV file.
+ * This class provides utility methods for writing data to a CSV file.
  */
 class CSVWriter {
     private static final String RESOURCE_PATH = "src/test/resources";
@@ -116,7 +116,7 @@ class CSVWriter {
 }
 
 /**
- * This class provides a method for loading data into a Neo4j database.
+ * This class provides utility methods for loading data into a Neo4j database.
  */
 class Neo4jLoader {
     /**
@@ -158,7 +158,7 @@ class Neo4jLoader {
 }
 
 /**
- * This class provides a method for converting data.
+ * This class provides utility methods for converting data.
  */
 class DataConverter {
     /**
