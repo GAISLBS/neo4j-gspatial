@@ -89,15 +89,28 @@ public class TestOperationUtility {
          * @return the generated Cypher query
          */
         private String buildSetOperationQuery(String nodeType1, String nodeType2, String operation) {
+            /*
             return String.format(
                     """
                                     MATCH (n:%s)
                                     MATCH (m:%s)
+                                    WITH collect(n) as n_list, collect(m) as m_list
                                     CALL gspatial.operation('intersects', [n.geometry, m.geometry]) YIELD result as intersects_filter
                                     WITH n, m, intersects_filter
                                     WHERE n <> m and intersects_filter = true
                                     CALL gspatial.operation('%s', [n.geometry, m.geometry]) YIELD result
                                     RETURN n.idx, m.idx, result
+                            """,
+                    nodeType1, nodeType2, operation);
+
+             */
+            //변경될 쿼리 -> input 값이 list 형식으로 들어올 것!
+            return String.format(
+                    """
+                            MATCH (n:AgendaArea)
+                            MATCH (m:AgendaArea)
+                            WITH COLLECT(n) as n_list, COLLECT(m) as m_list
+                            CALL gspatial.operation('intersects', [n_list, m_list]) YIELD result
                             """,
                     nodeType1, nodeType2, operation);
         }
