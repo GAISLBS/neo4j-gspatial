@@ -72,11 +72,19 @@ public class TestOperationUtility {
                     """
                             MATCH (n:%s)
                             MATCH (m:%s)
-                            CALL gspatial.operation('%s', [n, m]) YIELD result
-                            WITH n, m, result
-                            WHERE %s
-                            RETURN %s
+                            WITH COLLECT(n) as n_list, COLLECT(m) as m_list
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
+                            RETURN result
                             """,
+
+//                    """
+//                            MATCH (n:%s)
+//                            MATCH (m:%s)
+//                            CALL gspatial.operation('%s', [n, m]) YIELD result
+//                            WITH n, m, result
+//                            WHERE %s
+//                            RETURN %s
+//                            """
                     nodeType1, nodeType2, operation, conditions, returns);
         }
 
@@ -89,7 +97,6 @@ public class TestOperationUtility {
          * @return the generated Cypher query
          */
         private String buildSetOperationQuery(String nodeType1, String nodeType2, String operation) {
-            /*
             return String.format(
                     """
                                     MATCH (n:%s)
@@ -100,17 +107,6 @@ public class TestOperationUtility {
                                     WHERE n <> m and intersects_filter = true
                                     CALL gspatial.operation('%s', [n.geometry, m.geometry]) YIELD result
                                     RETURN n.idx, m.idx, result
-                            """,
-                    nodeType1, nodeType2, operation);
-
-             */
-            //변경될 쿼리 -> input 값이 list 형식으로 들어올 것!
-            return String.format(
-                    """
-                            MATCH (n:AgendaArea)
-                            MATCH (m:AgendaArea)
-                            WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-                            CALL gspatial.operation('intersects', [n_list, m_list]) YIELD result
                             """,
                     nodeType1, nodeType2, operation);
         }

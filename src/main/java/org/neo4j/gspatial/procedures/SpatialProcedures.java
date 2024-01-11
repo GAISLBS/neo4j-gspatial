@@ -34,6 +34,7 @@ public class SpatialProcedures {
      */
     @Procedure(value = "gspatial.operation")
     @Description("Generic method for spatial operations")
+//    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<List<Object>> args) {
     public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<Object> args) {
         if (operationExecutor == null) {
             operationExecutor = new SpatialOperationExecutor(log);

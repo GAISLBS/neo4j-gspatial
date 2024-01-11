@@ -5,6 +5,7 @@ import org.neo4j.gspatial.constants.SpatialOperationConstants.SpatialOperation;
 import org.neo4j.gspatial.utils.IOUtility;
 import org.neo4j.logging.Log;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -35,6 +36,28 @@ public class SpatialOperationExecutor {
      * @param rawArgs       the raw arguments for the operation
      * @return a stream containing the result of the operation
      */
+//    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgs) {
+//        List<IOUtility.Output> stream_list = new ArrayList<>();
+//        System.out.println(rawArgs.get(0).size());
+//        System.out.println(rawArgs.get(1).size());
+//
+//        for(int i = 0; i < rawArgs.get(0).size(); i++) {
+//            List<Object> args = new ArrayList<>();
+//            args.add(rawArgs.get(0).get(i));
+//            args.add(rawArgs.get(1).get(i));
+//
+//            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, args));
+//            List<Object> convertedArgs = IOUtility.argsConverter(operationName, args);
+//            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+//            Object result = operation.execute(convertedArgs);
+//            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+//                return Stream.empty();
+//            }
+//            Stream.of(new IOUtility.Output(IOUtility.convertResult(result)));
+//        }
+//        System.out.println(stream_list.stream());
+//        return stream_list.stream();
+
     public Stream<IOUtility.Output> executeOperation(String operationName, List<Object> rawArgs) {
         log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
         List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
