@@ -73,8 +73,8 @@ public class TestOperationUtility {
                             MATCH (n:%s)
                             MATCH (m:%s)
                             WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-                            RETURN result
+                            CALL gspatial.operations('%s', [n_list, m_list])
+                          
                             """,
 
 //                    """
@@ -84,7 +84,7 @@ public class TestOperationUtility {
 //                            WITH n, m, result
 //                            WHERE %s
 //                            RETURN %s
-//                            """
+//                            """,
                     nodeType1, nodeType2, operation, conditions, returns);
         }
 
