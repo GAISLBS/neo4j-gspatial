@@ -6,6 +6,7 @@ import org.neo4j.gspatial.utils.IOUtility;
 import org.neo4j.logging.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -49,31 +50,55 @@ public class SpatialOperationExecutor {
         return Stream.of(new IOUtility.Output(IOUtility.convertResult(result)));
     }
 
-    public void executeOperations(String operationName, List<List<Object>> rawArgsList) {
-        Stream.Builder<IOUtility.Output> outputBuilder = Stream.builder();
+    //거의 된 것 같은데.. 결과 형식이 map을 기대했으나 false가 나왔다고 함!
+//    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgsList) {
+//        Stream.Builder<IOUtility.Output> outputBuilder = Stream.builder();
+//
+//        List<Object> nList = rawArgsList.get(0);
+//        List<Object> mList = rawArgsList.get(1);
+//
+//        for (int i = 0; i < nList.size(); i++) {
+//            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
+//            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+//            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
+//            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+//            Object result = operation.execute(convertedArgs);
+//            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+//                continue;
+//            }
+//            outputBuilder.add(new IOUtility.Output(IOUtility.convertResult(result)));
+//        }
+//        return outputBuilder.build();
+//    }
 
+//    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgsList) {
+//        Stream.Builder<IOUtility.Output> outputBuilder = Stream.builder();
+//
+//        List<Object> nList = rawArgsList.get(0);
+//        List<Object> mList = rawArgsList.get(1);
+//
+//        for (int i = 0; i < nList.size(); i++) {
+//            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
+//            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+//            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
+//            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+//            Object result = operation.execute(convertedArgs);
+//            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+//                continue;
+//            }
+//            outputBuilder.add(new IOUtility.Output(IOUtility.convertResult(result)));
+//        }
+//        return outputBuilder.build();
+//    }
+
+
+
+    public void executeOperations(String operationName, List<List<Object>> rawArgsList) {
         List<Object> nList = rawArgsList.get(0);
         List<Object> mList = rawArgsList.get(1);
 
-        int len = max(nList.size(), mList.size());
-
-        for (int i = 0; i < len; i++) {
-            Object nowN = null;
-            Object nowM = null;
-
-            try {
-                nowN = nList.get(i);
-            } catch (IndexOutOfBoundsException e) {
-                continue;
-            }
-
-            try {
-                nowM = mList.get(i);
-            } catch (IndexOutOfBoundsException e) {
-                continue;
-            }
-
-            List<Object>rawArgs = List.of(nowN, nowM);
+        for (int i = 0; i < nList.size(); i++) {
+            List<Object>rawArgs = List.of(nList.get(i), mList.get(i));
             executeOperation(operationName, rawArgs);
         }
     }
