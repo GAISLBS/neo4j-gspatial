@@ -39,16 +39,29 @@ public class SpatialOperationExecutor {
      * @param rawArgs       the raw arguments for the operation
      * @return a stream containing the result of the operation
      */
-    public Stream<IOUtility.Output> executeOperation(String operationName, List<Object> rawArgs) {
-        log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
-        List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
-        SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
-        Object result = operation.execute(convertedArgs);
-        if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
-            return Stream.empty();
+    //result 가 true일 때의 인덱스를 stream에 담아 반환하는 방법!
+    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgsList) {
+        Stream.Builder<IOUtility.Output> outputBuilder = Stream.builder();
+
+        List<Object> nList = rawArgsList.get(0);
+        List<Object> mList = rawArgsList.get(1);
+
+        for (int i = 0; i < nList.size(); i++) {
+            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
+            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
+            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+            Object result = operation.execute(convertedArgs);
+            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+                continue;
+            }
+            if (result instanceof Boolean && (Boolean) result) {
+                outputBuilder.add(new IOUtility.Output(i));
+            }
         }
-        return Stream.of(new IOUtility.Output(IOUtility.convertResult(result)));
+        return outputBuilder.build();
     }
+
 
     //거의 된 것 같은데.. 결과 형식이 map을 기대했으나 false가 나왔다고 함!
 //    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgsList) {
@@ -71,35 +84,24 @@ public class SpatialOperationExecutor {
 //        return outputBuilder.build();
 //    }
 
-//    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgsList) {
-//        Stream.Builder<IOUtility.Output> outputBuilder = Stream.builder();
-//
+
+//    public Stream<IOUtility.Output> executeOperation(String operationName, List<Object> rawArgs) {
+//        log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+//        List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
+//        SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+//        Object result = operation.execute(convertedArgs);
+//        if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+//            return Stream.empty();
+//        }
+//        return Stream.of(new IOUtility.Output(IOUtility.convertResult(result)));
+//    }
+//    public void executeOperations(String operationName, List<List<Object>> rawArgsList) {
 //        List<Object> nList = rawArgsList.get(0);
 //        List<Object> mList = rawArgsList.get(1);
 //
 //        for (int i = 0; i < nList.size(); i++) {
-//            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
-//            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
-//            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
-//            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
-//            Object result = operation.execute(convertedArgs);
-//            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
-//                continue;
-//            }
-//            outputBuilder.add(new IOUtility.Output(IOUtility.convertResult(result)));
+//            List<Object>rawArgs = List.of(nList.get(i), mList.get(i));
+//            executeOperation(operationName, rawArgs);
 //        }
-//        return outputBuilder.build();
 //    }
-
-
-
-    public void executeOperations(String operationName, List<List<Object>> rawArgsList) {
-        List<Object> nList = rawArgsList.get(0);
-        List<Object> mList = rawArgsList.get(1);
-
-        for (int i = 0; i < nList.size(); i++) {
-            List<Object>rawArgs = List.of(nList.get(i), mList.get(i));
-            executeOperation(operationName, rawArgs);
-        }
-    }
 }

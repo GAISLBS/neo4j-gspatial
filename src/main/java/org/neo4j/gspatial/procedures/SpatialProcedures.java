@@ -32,21 +32,21 @@ public class SpatialProcedures {
      * @param args          the arguments for the operation
      * @return a stream containing the result of the operation
      */
+//    @Procedure(value = "gspatial.operation")
+//    @Description("Generic method for spatial operations")
+//    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<Object> args) {
+//        if (operationExecutor == null) {
+//            operationExecutor = new SpatialOperationExecutor(log);
+//        }
+//        return operationExecutor.executeOperation(operationName, args);
+//    }
+
     @Procedure(value = "gspatial.operation")
     @Description("Generic method for spatial operations")
-//    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<List<Object>> args) {
-    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<Object> args) {
+    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<List<Object>> args) {
         if (operationExecutor == null) {
             operationExecutor = new SpatialOperationExecutor(log);
         }
         return operationExecutor.executeOperation(operationName, args);
-    }
-
-    @Procedure(value = "gspatial.operations")
-    public void operations(@Name("operations") String operationName, @Name("args") List<List<Object>> args) {
-        if (operationExecutor == null) {
-            operationExecutor = new SpatialOperationExecutor(log);
-        }
-        operationExecutor.executeOperations(operationName, args);
     }
 }

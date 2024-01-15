@@ -73,45 +73,14 @@ public class TestOperationUtility {
                           MATCH (n:%s)
                           MATCH (m:%s)
                           WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-                                                        
-                          CALL gspatial.operations('%s', [n_list, m_list]) YIELD result
-                                                        
-                          WITH n_list, m_list, result
-                          UNWIND range(0, size(result)-1) AS idx
-                          WITH n_list[idx] AS n, m_list[idx] AS m, result[idx] AS operationResult
-                          WHERE operationResult = true
-                                                   
-                          RETURN n.idx AS nIdx, m.idx AS mIdx;""",
 
-//                    """
-//                            MATCH (n:%s)
-//                            MATCH (m:%s)
-//                            WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-//
-//                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-//
-//                            WITH n_list, m_list, [idx IN range(0, size(result)-1) WHERE result[idx] = true | idx] AS trueIndices
-//
-//                            UNWIND trueIndices AS trueIndex
-//                            WITH n_list[trueIndex] AS n, m_list[trueIndex] AS m
-//                            RETURN n.idx AS nIdx, m.idx AS mIdx;""",
+                          CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
 
-//                    """
-//                            MATCH (n:%s)
-//                            MATCH (m:%s)
-//                            WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-//                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-//                            UNWIND result AS operationResult
-//                            WITH n_list[operationResult.idx1] AS n, m_list[operationResult.idx2] AS m
-//                            WHERE n <> m AND operationResult.result = true
-//                            RETURN n.idx, m.idx""",
-//                    """
-//                            MATCH (n:%s)
-//                            MATCH (m:%s)
-//                            WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-//                            CALL gspatial.operations('%s', [n_list, m_list])
-//
-//                            """,
+                          UNWIND result AS idx
+                          WITH n_list[idx] AS n, m_list[idx] AS m
+                          WHERE n <> m
+                          RETURN n.idx, m.idx;
+                          """,
 
 //                    """
 //                            MATCH (n:%s)
