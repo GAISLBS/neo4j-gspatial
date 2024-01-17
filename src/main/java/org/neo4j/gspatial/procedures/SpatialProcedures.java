@@ -32,21 +32,30 @@ public class SpatialProcedures {
      * @param args          the arguments for the operation
      * @return a stream containing the result of the operation
      */
-//    @Procedure(value = "gspatial.operation")
-//    @Description("Generic method for spatial operations")
-//    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<Object> args) {
-//        if (operationExecutor == null) {
-//            operationExecutor = new SpatialOperationExecutor(log);
-//        }
-//        return operationExecutor.executeOperation(operationName, args);
-//    }
-
     @Procedure(value = "gspatial.operation")
     @Description("Generic method for spatial operations")
-    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<List<Object>> args) {
+    public Stream<Output> operation(@Name("operation") String operationName, @Name("args") List<Object> args) {
         if (operationExecutor == null) {
             operationExecutor = new SpatialOperationExecutor(log);
         }
         return operationExecutor.executeOperation(operationName, args);
+    }
+
+    /**
+     * Executes the given spatial operation with the given arguments.
+     * The operation is performed using the SpatialOperationExecutor.
+     * The result of the operation is returned as a stream.
+     *
+     * @param operationName the name of the operation to perform
+     * @param argsList      the arguments for the operation
+     * @return a stream containing the result of the operation
+     */
+    @Procedure(value = "gspatial.operations")
+    @Description("Generic method for spatial operations")
+    public Stream<Output> operations(@Name("operations") String operationName, @Name("argsList") List<List<Object>> argsList) {
+        if (operationExecutor == null) {
+            operationExecutor = new SpatialOperationExecutor(log);
+        }
+        return operationExecutor.executeOperations(operationName, argsList);
     }
 }

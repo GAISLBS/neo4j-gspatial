@@ -50,15 +50,15 @@ public class TestOperationUtility {
         public String generateQuery(String nodeType1, String nodeType2, String operation) {
             return switch (this) {
                 case TOPOLOGY ->
-                        buildOperationQuery(nodeType1, nodeType2, operation, "n <> m AND result = true", "n.idx, m.idx");
+                        buildOperationsQuery(nodeType1, nodeType2, operation, "n <> m", "n.idx, m.idx");
                 case SET -> buildSetOperationQuery(nodeType1, nodeType2, operation);
-                case DUAL_ARG -> buildOperationQuery(nodeType1, nodeType2, operation, "n <> m", "n.idx, m.idx, result");
+                case DUAL_ARG -> buildDistanceOperationQuery(nodeType1, nodeType2, operation, "n <> m", "n.idx, m.idx, result");
                 case PARAM -> buildParamOperationQuery(nodeType1, nodeType2, operation);
             };
         }
 
         /**
-         * Builds a Cypher query for a spatial operation.
+         * Builds a Cypher query for a spatial operations.
          *
          * @param nodeType1  the type of the first node
          * @param nodeType2  the type of the second node
@@ -67,29 +67,43 @@ public class TestOperationUtility {
          * @param returns    the expressions for the RETURN clause
          * @return the generated Cypher query
          */
-        private String buildOperationQuery(String nodeType1, String nodeType2, String operation, String conditions, String returns) {
+        private String buildOperationsQuery(String nodeType1, String nodeType2, String operation, String conditions, String returns) {
             return String.format(
                     """
                           MATCH (n:%s)
                           MATCH (m:%s)
                           WITH COLLECT(n) as n_list, COLLECT(m) as m_list
 
-                          CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-
+                          CALL gspatial.operations('%s', [n_list, m_list]) YIELD result
                           UNWIND result AS idx
                           WITH n_list[idx] AS n, m_list[idx] AS m
-                          WHERE n <> m
-                          RETURN n.idx, m.idx;
+                          WHERE %s
+                          RETURN %s;
                           """,
+                    nodeType1, nodeType2, operation, conditions, returns);
+        }
 
-//                    """
-//                            MATCH (n:%s)
-//                            MATCH (m:%s)
-//                            CALL gspatial.operation('%s', [n, m]) YIELD result
-//                            WITH n, m, result
-//                            WHERE %s
-//                            RETURN %s
-//                            """,
+
+        /**
+         * Builds a Cypher query for a distance operation.
+         *
+         * @param nodeType1  the type of the first node
+         * @param nodeType2  the type of the second node
+         * @param operation  the name of the operation
+         * @param conditions the conditions for the WHERE clause
+         * @param returns    the expressions for the RETURN clause
+         * @return the generated Cypher query
+         */
+        private String buildDistanceOperationQuery(String nodeType1, String nodeType2, String operation, String conditions, String returns) {
+            return String.format(
+                    """
+                            MATCH (n:%s)
+                            MATCH (m:%s)
+                            CALL gspatial.operation('%s', [n, m]) YIELD result
+                            WITH n, m, result
+                            WHERE %s
+                            RETURN %s
+                            """,
                     nodeType1, nodeType2, operation, conditions, returns);
         }
 
