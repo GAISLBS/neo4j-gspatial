@@ -120,9 +120,13 @@ public class TestOperationUtility {
                     """
                                     MATCH (n:%s)
                                     MATCH (m:%s)
-                                    CALL gspatial.operation('intersects', [n.geometry, m.geometry]) YIELD result as intersects_filter
-                                    WITH n, m, intersects_filter
-                                    WHERE n <> m and intersects_filter = true
+                                    WITH COLLECT(n) as n_list, COLLECT(m) as m_list
+                                    
+                                    CALL gspatial.operations('intersects', [n_list, m_list]) YIELD result
+                                    
+                                    UNWIND result AS idx
+                                    WITH n_list[idx] AS n, m_list[idx] AS m
+                                    WHERE n <> m
                                     CALL gspatial.operation('%s', [n.geometry, m.geometry]) YIELD result
                                     RETURN n.idx, m.idx, result
                             """,
