@@ -81,10 +81,14 @@ public class IOUtility {
      * It includes a single field 'result' that contains the result of the operation.
      */
     public static class Output {
-        public Object result;
+        public List<List<Object>> result;
+        public List<Object> resultList;
+        public List<Object> indexList;
 
-        public Output(Object result) {
-            this.result = result;
+        public Output(List<Object> resultList, List<Object> indexList) {
+            this.resultList = resultList;
+            this.indexList = indexList;
+            this.result = List.of(resultList, indexList);
         }
     }
 }
