@@ -70,16 +70,18 @@ public class TestOperationUtility {
         private String buildOperationsQuery(String nodeType1, String nodeType2, String operation, String conditions, String returns) {
             return String.format(
                     """
-                          MATCH (n:%s)
-                          MATCH (m:%s)
-                          WITH COLLECT(n) as n_list, COLLECT(m) as m_list
+                           MATCH (n:%s)
+                           MATCH (m:%s)
 
-                          CALL gspatial.operations('%s', [n_list, m_list]) YIELD result
-                          UNWIND result AS idx
-                          WITH n_list[idx] AS n, m_list[idx] AS m
-                          WHERE %s
-                          RETURN %s;
-                          """,
+                           WITH COLLECT(n) as n_list, COLLECT(m) as m_list
+                           CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
+                           
+                           UNWIND result[1] AS idx
+                           WITH n_list[idx] AS n, m_list[idx] AS m
+
+                           WHERE %s
+                           RETURN %s;
+                           """,
                     nodeType1, nodeType2, operation, conditions, returns);
         }
 
@@ -99,8 +101,13 @@ public class TestOperationUtility {
                     """
                             MATCH (n:%s)
                             MATCH (m:%s)
-                            CALL gspatial.operation('%s', [n, m]) YIELD result
-                            WITH n, m, result
+                                                        
+                            WITH n, m, collect(n) AS n_list, collect(m) AS m_list
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
+                                                        
+                            UNWIND result[0] AS results
+                            WITH n, m, ROUND(results, 4) AS result
+                            
                             WHERE %s
                             RETURN %s
                             """,
@@ -118,17 +125,22 @@ public class TestOperationUtility {
         private String buildSetOperationQuery(String nodeType1, String nodeType2, String operation) {
             return String.format(
                     """
-                                    MATCH (n:%s)
-                                    MATCH (m:%s)
-                                    WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-                                    
-                                    CALL gspatial.operations('intersects', [n_list, m_list]) YIELD result
-                                    
-                                    UNWIND result AS idx
-                                    WITH n_list[idx] AS n, m_list[idx] AS m
-                                    WHERE n <> m
-                                    CALL gspatial.operation('%s', [n.geometry, m.geometry]) YIELD result
-                                    RETURN n.idx, m.idx, result
+                            MATCH (n:%s)
+                            MATCH (m:%s)
+                            WITH COLLECT(n) AS n_list, COLLECT(m) AS m_list
+                                                        
+                            CALL gspatial.operation('intersects', [n_list, m_list]) YIELD result AS results
+                                                        
+                            UNWIND results[1] AS idx
+                            WITH n_list[idx] AS n, m_list[idx] AS m
+                            WHERE n <> m
+                                                        
+                            WITH n, m, COLLECT(n.geometry) AS geometries1, COLLECT(m.geometry) AS geometries2
+                                                        
+                            CALL gspatial.operation('%s', [geometries1, geometries2]) YIELD result AS results
+                            UNWIND results[0] AS result
+                                                        
+                            RETURN n.idx, m.idx, result
                             """,
                     nodeType1, nodeType2, operation);
         }
@@ -148,8 +160,10 @@ public class TestOperationUtility {
                 return String.format(
                         """
                                 MATCH (n:%s)
-                                CALL gspatial.operation('%s', [n.geometry, %s]) YIELD result
-                                RETURN n.idx, result
+                                CALL gspatial.operation('%s', [[n.geometry], [%s]]) YIELD result AS results
+                                UNWIND results[0] AS result
+
+                                RETURN n.idx, result;
                                 """,
                         nodeType1, operation, param);
             } catch (NumberFormatException e) {
@@ -202,7 +216,15 @@ public class TestOperationUtility {
      * @return a list of maps representing the results of the operation
      */
     private static List<Map<String, Object>> executeSingleInputSpatialQuery(Driver driver, String nodeType, String operation) {
-        String cypherQuery = String.format("MATCH (n:%s) CALL gspatial.operation('%s', [n.geometry]) YIELD result RETURN n.idx, result", nodeType, operation);
+        String cypherQuery = String.format("""
+                MATCH (n:%s)
+                WITH n, collect(n.geometry) AS geometries
+                CALL gspatial.operation('%s', [geometries]) YIELD result AS results
+                
+                UNWIND results[0] AS result
+                RETURN n.idx, result
+                """,
+                nodeType, operation);
         return executeQuery(driver, cypherQuery);
     }
 
