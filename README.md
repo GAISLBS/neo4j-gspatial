@@ -22,6 +22,7 @@ To install this plugin into your Neo4j database, follow the steps below:
 - SpatialProcedures Class: Provides main procedures to perform spatial operations.
 - Various Functions for Spatial Operations: Perform different spatial operations that categorized TOPOLOGICAL Operations, SET Operations, Other Operations.
   - Topological Operations: Perform topological operations such as CONTAINS, COVERS, COVERED_BY, CROSSES, DISJOINT, EQUALS, INTERSECTS, OVERLAPS, TOUCHES, WITHIN. They require two geometries in the WKT format as arguments.
+  - Distance Operations: Perform distance operations such as DISTANCE. They require two geometries in the WKT format as arguments.
   - Set Operations: Perform set operations such as DIFFERENCE, INTERSECTION, UNION. They also require two geometries in the WKT format as arguments.
   - Other Operations: Perform other operations such as AREA, BUFFER, BOUNDARY, CENTROID, CONVEX_HULL, DIMENSION, DISTANCE, ENVELOPE, LENGTH, SRID.
     - AREA, BOUNDARY, CENTROID, CONVEX_HULL, DIMENSION, ENVELOPE, LENGTH, SRID: These operations require a single geometry in the WKT format as an argument.
@@ -31,10 +32,12 @@ To install this plugin into your Neo4j database, follow the steps below:
 
 ## Usage Examples
 To perform spatial operations, you must adhere to the specified format.\
-"CALL gspatial.operation(operationName, [arg1, arg2]) YIELD result"
+"CALL gspatial.operation(operationName, [argList1, argList2]) YIELD result"
 where operationName is the name of the operation to be performed,
-arg1 and arg2 are the arguments required for the operation,
-and result is the result of the operation.
+argList1 and argList2 are the argument lists required for the operation,
+and result is the list consisted with `resultList` and `indexList`.
+`resultList` consists of results of the operation. 
+And `indexList` consists of information about the valid node indices from the results of the operation.
 use Several Neo4j's Cypher query language as follows:
 
 Topological Operation Example:
