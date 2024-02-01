@@ -5,8 +5,11 @@ import org.neo4j.gspatial.constants.SpatialOperationConstants.SpatialOperation;
 import org.neo4j.gspatial.utils.IOUtility;
 import org.neo4j.logging.Log;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import static org.apache.commons.lang3.math.NumberUtils.max;
 
 /**
  * This class is responsible for executing spatial operations.
@@ -32,17 +35,67 @@ public class SpatialOperationExecutor {
      * Otherwise, the result is converted to the appropriate format using the IOUtility.convertResult method and returned as a stream.
      *
      * @param operationName the name of the operation to perform
-     * @param rawArgs       the raw arguments for the operation
+     * @param rawArgList    the raw arguments for the operation
      * @return a stream containing the result of the operation
      */
-    public Stream<IOUtility.Output> executeOperation(String operationName, List<Object> rawArgs) {
-        log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
-        List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
-        SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
-        Object result = operation.execute(convertedArgs);
-        if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
-            return Stream.empty();
+    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgList) {
+        if (rawArgList.size() == 1) {
+            return executeSingleOperation(operationName, rawArgList.get(0));
         }
-        return Stream.of(new IOUtility.Output(IOUtility.convertResult(result)));
+        else {
+            return executeDualOperation(operationName, rawArgList);
+        }
+    }
+
+    private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs) {
+        List<Object> resultList = new ArrayList<>();
+        List<Object> indexList = new ArrayList<>();
+
+        for (int i = 0; i < rawArgs.size(); i++) {
+            List<Object> rawArg = List.of(rawArgs.get(i));
+            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArg));
+            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArg);
+            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+            Object result = operation.execute(convertedArgs);
+
+            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+                continue;
+            }
+
+            resultList.add(IOUtility.convertResult(result));
+
+            if (result instanceof Boolean && (Boolean) result) {
+                indexList.add(IOUtility.convertResult(i));
+            }
+        }
+        return Stream.of(new IOUtility.Output(resultList, indexList));
+    }
+
+    private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList) {
+        List<Object> resultList = new ArrayList<>();
+        List<Object> indexList = new ArrayList<>();
+
+        List<Object> nList = rawArgList.get(0);
+        List<Object> mList = rawArgList.get(1);
+
+        for (int i = 0; i < nList.size(); i++) {
+            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
+            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
+            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+            Object result = operation.execute(convertedArgs);
+
+            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+                continue;
+            }
+
+            resultList.add(IOUtility.convertResult(result));
+
+            if (result instanceof Boolean && (Boolean) result) {
+                indexList.add(IOUtility.convertResult(i));
+            }
+        }
+
+        return Stream.of(new IOUtility.Output(resultList, indexList));
     }
 }
