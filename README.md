@@ -22,6 +22,7 @@ To install this plugin into your Neo4j database, follow the steps below:
 - SpatialProcedures Class: Provides main procedures to perform spatial operations.
 - Various Functions for Spatial Operations: Perform different spatial operations that categorized TOPOLOGICAL Operations, SET Operations, Other Operations.
   - Topological Operations: Perform topological operations such as CONTAINS, COVERS, COVERED_BY, CROSSES, DISJOINT, EQUALS, INTERSECTS, OVERLAPS, TOUCHES, WITHIN. They require two geometries in the WKT format as arguments.
+  - Distance Operations: Perform distance operations such as DISTANCE. They require two geometries in the WKT format as arguments.
   - Set Operations: Perform set operations such as DIFFERENCE, INTERSECTION, UNION. They also require two geometries in the WKT format as arguments.
   - Other Operations: Perform other operations such as AREA, BUFFER, BOUNDARY, CENTROID, CONVEX_HULL, DIMENSION, DISTANCE, ENVELOPE, LENGTH, SRID.
     - AREA, BOUNDARY, CENTROID, CONVEX_HULL, DIMENSION, ENVELOPE, LENGTH, SRID: These operations require a single geometry in the WKT format as an argument.
@@ -31,33 +32,64 @@ To install this plugin into your Neo4j database, follow the steps below:
 
 ## Usage Examples
 To perform spatial operations, you must adhere to the specified format.\
-"CALL gspatial.operation(operationName, [arg1, arg2]) YIELD result"
+"CALL gspatial.operation(operationName, [argList1, argList2]) YIELD result"
 where operationName is the name of the operation to be performed,
-arg1 and arg2 are the arguments required for the operation,
-and result is the result of the operation.
+argList1 and argList2 are the argument lists required for the operation,
+and result is the list consisted with `resultList` and `indexList`.
+`resultList` consists of results of the operation. 
+And `indexList` consists of information about the valid node indices from the results of the operation.
 use Several Neo4j's Cypher query language as follows:
 
 Topological Operation Example:
 ``` Cypher
 MATCH (n:NodeType1)
 MATCH (m:NodeType2)
-CALL gspatial.operation('CONTAINS', [n.geometry, m.geometry]) YIELD result
-WITH n, m, result
-WHERE n <> m AND result = true
-RETURN n.idx, m.idx, result
+
+WITH COLLECT(n) as n_list, COLLECT(m) as m_list
+CALL gspatial.operation('CONTAINS', [n_list, m_list]) YIELD result
+
+UNWIND result[1] AS idx
+WITH n_list[idx] AS n, m_list[idx] AS m
+
+WHERE n <> m
+RETURN n.idx, m.idx
 ```
 
 This query finds all pairs of nodes of type NodeType1 and NodeType2 that satisfy the CONTAINS condition.
+
+Distance Operation Example:
+```Cypher
+MATCH (n:NodeType1)
+MATCH (m:NodeType2)
+                            
+WITH n, m, COLLECT(n) AS n_list, COLLECT(m) AS m_list
+CALL gspatial.operation('DISTANCE', [n_list, m_list]) YIELD result
+
+WHERE n <> m                            
+UNWIND result[0] AS results
+
+RETURN n.idx, m.idx, results
+```
+
+This query finds all pairs of nodes of type NodeType1 and NodeType2 and calculates the distance between them.
 
 Set Operation Example:
 ```Cypher
 MATCH (n:NodeType1)
 MATCH (m:NodeType2)
-CALL gspatial.operation('intersects', [n, m]) YIELD result as intersects_filter
-WITH n, m, intersects_filter
-WHERE n <> m and intersects_filter = true
-CALL gspatial.operation('UNION', [n.geometry, m.geometry]) YIELD result
-RETURN n.idx, m.idx, result
+
+WITH COLLECT(n) AS n_list, COLLECT(m) AS m_list                      
+CALL gspatial.operation('intersects', [n_list, m_list]) YIELD result AS results    
+               
+UNWIND results[1] AS idx
+WITH n_list[idx] AS n, m_list[idx] AS m
+
+WHERE n <> m                  
+WITH n, m, COLLECT(n.geometry) AS geometries1, COLLECT(m.geometry) AS geometries2                  
+CALL gspatial.operation('UNION', [geometries1, geometries2]) YIELD result
+
+UNWIND result[0] AS results                  
+RETURN n.idx, m.idx, results
 ```
 
 This query finds all pairs of nodes of type NodeType1 and NodeType2 that satisfy the INTERSECTS condition and returns the UNION of their geometries.
@@ -66,14 +98,19 @@ arg1 and arg2 can be either a node if it has property key 'geometry' and its val
 Other Operation Example:
 ```Cypher
 MATCH (n:NodeType1)
-CALL gspatial.operation('AREA', [n.geometry]) YIELD result
-RETURN n.idx, result
+WITH n, collect(n.geometry) AS geometries
+CALL gspatial.operation('AREA', [geometries]) YIELD result
+
+UNWIND result[0] AS results
+RETURN n.idx, results
 ```
 This query calculates the area of each node of type NodeType1.
 
 ```Cypher
-CALL gspatial.operation('BUFFER', ['POINT (10 10)', 2.0]) YIELD result
-RETURN result
+CALL gspatial.operation('BUFFER', [['POINT (10 10)'], [2.0]]) YIELD result
+UNWIND result[0] AS results
+
+RETURN results;
 ```
 This query creates a buffer of radius 2.0 around a given point.
 
