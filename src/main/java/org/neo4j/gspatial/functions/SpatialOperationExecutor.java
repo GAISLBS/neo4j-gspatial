@@ -83,11 +83,12 @@ public class SpatialOperationExecutor {
             List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
             SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
             Object result = operation.execute(convertedArgs);
-            resultList.add(IOUtility.convertResult(result));
 
             if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
                 continue;
             }
+
+            resultList.add(IOUtility.convertResult(result));
 
             if (result instanceof Boolean && (Boolean) result) {
                 indexList.add(IOUtility.convertResult(i));
