@@ -38,23 +38,23 @@ public class SpatialOperationExecutor {
      * @param rawArgList    the raw arguments for the operation
      * @return a stream containing the result of the operation
      */
-    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgList) {
+    public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgList, String geomType) {
         if (rawArgList.size() == 1) {
-            return executeSingleOperation(operationName, rawArgList.get(0));
+            return executeSingleOperation(operationName, rawArgList.get(0), geomType);
         }
         else {
-            return executeDualOperation(operationName, rawArgList);
+            return executeDualOperation(operationName, rawArgList, geomType);
         }
     }
 
-    private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs) {
+    private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs, String geomType) {
         List<Object> resultList = new ArrayList<>();
         List<Object> indexList = new ArrayList<>();
 
         for (int i = 0; i < rawArgs.size(); i++) {
             List<Object> rawArg = List.of(rawArgs.get(i));
             log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArg));
-            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArg);
+            List<Object> convertedArgs = IOUtility.argsConverter(rawArg, geomType);
             SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
             Object result = operation.execute(convertedArgs);
 
@@ -71,7 +71,7 @@ public class SpatialOperationExecutor {
         return Stream.of(new IOUtility.Output(resultList, indexList));
     }
 
-    private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList) {
+    private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList, String geomType) {
         List<Object> resultList = new ArrayList<>();
         List<Object> indexList = new ArrayList<>();
 
@@ -81,7 +81,7 @@ public class SpatialOperationExecutor {
         for (int i = 0; i < nList.size(); i++) {
             List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
             log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
-            List<Object> convertedArgs = IOUtility.argsConverter(operationName, rawArgs);
+            List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomType);
             SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
             Object result = operation.execute(convertedArgs);
 
