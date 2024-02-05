@@ -322,7 +322,7 @@ public class TestOperationUtility {
         if (value instanceof String) {
             String normalizedString = ((String) value).replace("\"", "");
             try {
-                Geometry geometry = GeometryUtility.parseWKT(normalizedString);
+                Geometry geometry = GeometryUtility.parseGeometry(normalizedString);
                 normalizedResult.put("result", geometry);
             } catch (IllegalArgumentException e) {
                 normalizedResult.put("result", normalizedString);
