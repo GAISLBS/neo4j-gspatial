@@ -43,7 +43,7 @@ public class IOUtility {
         if (arg instanceof Node) {
             return convertNode((Node) arg);
         } else if (arg instanceof String) {
-            return GeometryUtility.parseWKT((String) arg);
+            return GeometryUtility.parseGeometry((String) arg);
         } else if (arg instanceof Double && BUFFER_OPERATION.equals(operationName)) {
             return arg;
         }
