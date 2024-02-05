@@ -20,10 +20,10 @@ public class IOUtility {
      * @param args          the arguments for the operation
      * @return the converted arguments
      */
-    public static List<Object> argsConverter(List<Object> args, String geomType) {
+    public static List<Object> argsConverter(List<Object> args, String geomFormat) {
         List<Object> processedArgs = new ArrayList<>();
         for (Object arg : args) {
-            processedArgs.add(convertArg(arg, geomType));
+            processedArgs.add(convertArg(arg, geomFormat));
         }
         return processedArgs;
     }
@@ -37,15 +37,15 @@ public class IOUtility {
      * @param arg           the argument to convert
      * @return the converted argument
      */
-    private static Object convertArg(Object arg, String geomType) {
+    private static Object convertArg(Object arg, String geomFormat) {
         if (arg instanceof Node) {
-            return convertNode((Node) arg, geomType);
+            return convertNode((Node) arg, geomFormat);
         }
         if (arg instanceof String) {
-            if (geomType.equals("WKB")) {
+            if (geomFormat.equals("WKB")) {
                 return GeometryUtility.parseWKB((String) arg);
             }
-            if (geomType.equals("WKT")){
+            if (geomFormat.equals("WKT")){
                 return GeometryUtility.parseWKT((String) arg);
             }
         }
@@ -60,11 +60,11 @@ public class IOUtility {
      * @return the converted Geometry object
      * @throws IllegalArgumentException if the Node does not have a 'geometry' property
      */
-    private static Object convertNode(Node node, String geomType) {
+    private static Object convertNode(Node node, String geomFormat) {
         if (node.hasProperty("geometry")) {
-            if (geomType.equals("WKB"))
+            if (geomFormat.equals("WKB"))
                 return GeometryUtility.parseWKB(node.getProperty("geometry").toString());
-            else if (geomType.equals("WKT"))
+            else if (geomFormat.equals("WKT"))
                 return GeometryUtility.parseWKT(node.getProperty("geometry").toString());
         }
         throw new IllegalArgumentException("Node does not have a 'geometry' property");
