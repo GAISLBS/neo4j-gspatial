@@ -60,7 +60,7 @@ public class IOUtility {
      */
     private static Object convertNode(Node node) {
         if (node.hasProperty("geometry")) {
-            return GeometryUtility.parseWKT(node.getProperty("geometry").toString());
+            return GeometryUtility.parseGeometry(node.getProperty("geometry").toString());
         }
         throw new IllegalArgumentException("Node does not have a 'geometry' property");
     }

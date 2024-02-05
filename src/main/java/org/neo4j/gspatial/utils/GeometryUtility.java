@@ -2,6 +2,7 @@ package org.neo4j.gspatial.utils;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.ParseException;
+import org.locationtech.jts.io.WKBReader;
 import org.locationtech.jts.io.WKTReader;
 
 /**
@@ -11,6 +12,7 @@ import org.locationtech.jts.io.WKTReader;
 public class GeometryUtility {
 
     private static final WKTReader wktReader = new WKTReader();
+    private static final WKBReader wkbReader = new WKBReader();
     private static final int defaultSRID = 4326;
 
     /**
@@ -28,6 +30,25 @@ public class GeometryUtility {
             return geometry;
         } catch (ParseException e) {
             throw new IllegalArgumentException("Failed to parse WKT", e);
+        }
+    }
+
+    public static Geometry parseWKB(String wkb) {
+        try {
+            byte[] bytes = WKBReader.hexToBytes(wkb);
+            Geometry geometry = wkbReader.read(bytes);
+            geometry.setSRID(defaultSRID);
+            return geometry;
+        } catch (ParseException e) {
+            throw new IllegalArgumentException("Failed to parse WKB", e);
+        }
+    }
+
+    public static Geometry parseGeometry(String data) {
+        try {
+            return parseWKT(data);
+        } catch (IllegalArgumentException e) {
+            return parseWKB(data);
         }
     }
 
