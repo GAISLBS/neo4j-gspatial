@@ -32,9 +32,10 @@ To install this plugin into your Neo4j database, follow the steps below:
 
 ## Usage Examples
 To perform spatial operations, you must adhere to the specified format.\
-"CALL gspatial.operation(operationName, [argList1, argList2]) YIELD result"
+`"CALL gspatial.operation(operationName, [argList1, argList2], geomFormat) YIELD result"`
 where operationName is the name of the operation to be performed,
 argList1 and argList2 are the argument lists required for the operation,
+geomFormat is the format of the geometry (WKT or WKB. WKT by default),
 and result is the list consisted with `resultList` and `indexList`.
 `resultList` consists of results of the operation. 
 And `indexList` consists of information about the valid node indices from the results of the operation.
@@ -46,7 +47,7 @@ MATCH (n:NodeType1)
 MATCH (m:NodeType2)
 
 WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-CALL gspatial.operation('CONTAINS', [n_list, m_list]) YIELD result
+CALL gspatial.operation('CONTAINS', [n_list, m_list], 'WKT') YIELD result
 
 UNWIND result[1] AS idx
 WITH n_list[idx] AS n, m_list[idx] AS m
@@ -107,7 +108,7 @@ RETURN n.idx, results
 This query calculates the area of each node of type NodeType1.
 
 ```Cypher
-CALL gspatial.operation('BUFFER', [['POINT (10 10)'], [2.0]]) YIELD result
+CALL gspatial.operation('BUFFER', [['010100000000000000000024400000000000002440'], [2.0]], 'WKB') YIELD result
 UNWIND result[0] AS results
 
 RETURN results;
