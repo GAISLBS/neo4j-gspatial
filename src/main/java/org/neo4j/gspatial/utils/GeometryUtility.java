@@ -23,7 +23,7 @@ public class GeometryUtility {
      * @return the parsed Geometry object
      * @throws IllegalArgumentException if the WKT string cannot be parsed
      */
-    public static Geometry parseWKT(String wkt) {
+    private static Geometry parseWKT(String wkt) {
         try {
             Geometry geometry = wktReader.read(wkt);
             geometry.setSRID(defaultSRID);
@@ -33,7 +33,7 @@ public class GeometryUtility {
         }
     }
 
-    public static Geometry parseWKB(String wkb) {
+    private static Geometry parseWKB(String wkb) {
         try {
             byte[] bytes = WKBReader.hexToBytes(wkb);
             Geometry geometry = wkbReader.read(bytes);
