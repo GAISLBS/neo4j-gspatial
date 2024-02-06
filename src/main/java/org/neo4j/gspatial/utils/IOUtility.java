@@ -17,14 +17,13 @@ public class IOUtility {
      * Converts the given arguments to the appropriate format for spatial operations.
      * Each argument is converted using the convertArg method.
      *
-     * @param operationName the name of the operation to perform
      * @param args          the arguments for the operation
      * @return the converted arguments
      */
-    public static List<Object> argsConverter(String operationName, List<Object> args) {
+    public static List<Object> argsConverter(List<Object> args, String geomFormat) {
         List<Object> processedArgs = new ArrayList<>();
         for (Object arg : args) {
-            processedArgs.add(convertArg(arg, operationName));
+            processedArgs.add(convertArg(arg, geomFormat));
         }
         return processedArgs;
     }
@@ -36,16 +35,19 @@ public class IOUtility {
      * If the argument is a Double and the operation is BUFFER, the argument is returned as is.
      *
      * @param arg           the argument to convert
-     * @param operationName the name of the operation to perform
      * @return the converted argument
      */
-    private static Object convertArg(Object arg, String operationName) {
+    private static Object convertArg(Object arg, String geomFormat) {
         if (arg instanceof Node) {
-            return convertNode((Node) arg);
-        } else if (arg instanceof String) {
-            return GeometryUtility.parseWKT((String) arg);
-        } else if (arg instanceof Double && BUFFER_OPERATION.equals(operationName)) {
-            return arg;
+            return convertNode((Node) arg, geomFormat);
+        }
+        if (arg instanceof String) {
+            if (geomFormat.equals("WKB")) {
+                return GeometryUtility.parseWKB((String) arg);
+            }
+            if (geomFormat.equals("WKT")){
+                return GeometryUtility.parseWKT((String) arg);
+            }
         }
         return arg;
     }
@@ -58,9 +60,12 @@ public class IOUtility {
      * @return the converted Geometry object
      * @throws IllegalArgumentException if the Node does not have a 'geometry' property
      */
-    private static Object convertNode(Node node) {
+    private static Object convertNode(Node node, String geomFormat) {
         if (node.hasProperty("geometry")) {
-            return GeometryUtility.parseWKT(node.getProperty("geometry").toString());
+            if (geomFormat.equals("WKB"))
+                return GeometryUtility.parseWKB(node.getProperty("geometry").toString());
+            else if (geomFormat.equals("WKT"))
+                return GeometryUtility.parseWKT(node.getProperty("geometry").toString());
         }
         throw new IllegalArgumentException("Node does not have a 'geometry' property");
     }

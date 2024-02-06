@@ -34,10 +34,14 @@ public class SpatialProcedures {
      */
     @Procedure(value = "gspatial.operation")
     @Description("Generic method for spatial operations")
-    public Stream<IOUtility.Output> operation(@Name("operation") String operationName, @Name("argsList") List<List<Object>> argsList) {
+    public Stream<IOUtility.Output> operation(@Name("operation") String operationName, @Name("argsList") List<List<Object>> argsList, @Name(value = "geomFormat", defaultValue = "WKT") String geomFormat) {
+        geomFormat = geomFormat.toUpperCase();
+        if (!geomFormat.equals("WKB") && !geomFormat.equals("WKT")) {
+            throw new IllegalArgumentException("Invalid geomFormat. Must be either 'WKB' or 'WKT'");
+        }
         if (operationExecutor == null) {
             operationExecutor = new SpatialOperationExecutor(log);
         }
-        return operationExecutor.executeOperation(operationName, argsList);
+        return operationExecutor.executeOperation(operationName, argsList, geomFormat);
     }
 }
