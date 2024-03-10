@@ -78,6 +78,12 @@ public class SpatialOperationExecutor {
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
 
+        if (nList.size() < mList.size()) {
+            List<Object> temp = nList;
+            nList = mList;
+            mList = temp;
+        }
+
         for (int i = 0; i < nList.size(); i++) {
             List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
             log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
