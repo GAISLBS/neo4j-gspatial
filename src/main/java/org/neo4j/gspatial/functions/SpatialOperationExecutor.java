@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.math.NumberUtils.max;
+import static org.neo4j.gspatial.constants.SpatialOperationConstants.isSetOperation;
 
 /**
  * This class is responsible for executing spatial operations.
@@ -72,6 +73,11 @@ public class SpatialOperationExecutor {
     }
 
     private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList, String geomFormat) {
+        String operationNameUpper = operationName.toUpperCase();
+        if (isSetOperation(operationNameUpper)) {
+            rawArgList = executeIntersectsOperation(rawArgList, geomFormat);
+        }
+
         List<Object> resultList = new ArrayList<>();
         List<Object> indexList = new ArrayList<>();
 
@@ -86,9 +92,9 @@ public class SpatialOperationExecutor {
 
         for (int i = 0; i < nList.size(); i++) {
             List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
-            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+            log.info(String.format("Running gspatial.%s with arguments: %s", operationNameUpper, rawArgs));
             List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomFormat);
-            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+            SpatialOperation operation = SpatialOperation.valueOf(operationNameUpper);
             Object result = operation.execute(convertedArgs);
 
             if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
@@ -103,5 +109,34 @@ public class SpatialOperationExecutor {
         }
 
         return Stream.of(new IOUtility.Output(resultList, indexList));
+    }
+
+    private List<List<Object>> executeIntersectsOperation(List<List<Object>> rawArgList, String geomFormat) {
+        List<List<Object>> resultList = new ArrayList<>();
+        List<Object> nList = rawArgList.get(0);
+        List<Object> mList = rawArgList.get(1);
+
+        if (nList.size() < mList.size()) {
+            List<Object> temp = nList;
+            nList = mList;
+            mList = temp;
+        }
+
+        for (int i = 0; i < nList.size(); i++) {
+            if (nList.get(i).equals(mList.get(i))) {
+                continue;
+            }
+            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
+            log.info(String.format("Running gspatial.INTERSECTS with arguments: %s", rawArgs));
+            List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomFormat);
+            SpatialOperation operation = SpatialOperation.INTERSECTS;
+            Object result = operation.execute(convertedArgs);
+
+            if (result instanceof Boolean && (Boolean) result) {
+                resultList.add(List.of(nList.get(i), (mList.get(i))));
+            }
+        }
+
+        return resultList;
     }
 }
