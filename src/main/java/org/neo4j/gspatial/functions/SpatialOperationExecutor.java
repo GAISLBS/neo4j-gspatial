@@ -84,12 +84,6 @@ public class SpatialOperationExecutor {
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
 
-        if (nList.size() < mList.size()) {
-            List<Object> temp = nList;
-            nList = mList;
-            mList = temp;
-        }
-
         for (int i = 0; i < nList.size(); i++) {
             List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
             log.info(String.format("Running gspatial.%s with arguments: %s", operationNameUpper, rawArgs));
@@ -112,15 +106,10 @@ public class SpatialOperationExecutor {
     }
 
     private List<List<Object>> executeIntersectsOperation(List<List<Object>> rawArgList, String geomFormat) {
-        List<List<Object>> resultList = new ArrayList<>();
+        List<Object> newNList = new ArrayList<>();
+        List<Object> newMList = new ArrayList<>();
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
-
-        if (nList.size() < mList.size()) {
-            List<Object> temp = nList;
-            nList = mList;
-            mList = temp;
-        }
 
         for (int i = 0; i < nList.size(); i++) {
             if (nList.get(i).equals(mList.get(i))) {
@@ -133,10 +122,11 @@ public class SpatialOperationExecutor {
             Object result = operation.execute(convertedArgs);
 
             if (result instanceof Boolean && (Boolean) result) {
-                resultList.add(List.of(nList.get(i), (mList.get(i))));
+                newNList.add(nList.get(i));
+                newMList.add(mList.get(i));
             }
         }
 
-        return resultList;
+        return List.of(newNList, newMList);
     }
 }
