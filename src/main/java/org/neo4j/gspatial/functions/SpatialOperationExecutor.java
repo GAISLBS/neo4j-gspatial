@@ -1,6 +1,8 @@
 package org.neo4j.gspatial.functions;
 
 import org.locationtech.jts.geom.Geometry;
+import org.neo4j.graphdb.Entity;
+import org.neo4j.graphdb.Node;
 import org.neo4j.gspatial.constants.SpatialOperationConstants.SpatialOperation;
 import org.neo4j.gspatial.utils.IOUtility;
 import org.neo4j.logging.Log;
@@ -66,20 +68,23 @@ public class SpatialOperationExecutor {
             resultList.add(IOUtility.convertResult(result));
 
             if (result instanceof Boolean && (Boolean) result) {
-                indexList.add(IOUtility.convertResult(i));
+                indexList.add(i);
             }
         }
         return Stream.of(new IOUtility.Output(resultList, indexList));
     }
 
     private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList, String geomFormat) {
-        String operationNameUpper = operationName.toUpperCase();
-        if (isSetOperation(operationNameUpper)) {
-            rawArgList = executeIntersectsOperation(rawArgList, geomFormat);
-        }
-
+        boolean hasIndexList = false;
         List<Object> resultList = new ArrayList<>();
         List<Object> indexList = new ArrayList<>();
+        String operationNameUpper = operationName.toUpperCase();
+
+        if (isSetOperation(operationNameUpper)) {
+            rawArgList = executeIntersectsOperation(rawArgList, geomFormat);
+            indexList = rawArgList.get(2);
+            hasIndexList = true;
+        }
 
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
@@ -97,8 +102,8 @@ public class SpatialOperationExecutor {
 
             resultList.add(IOUtility.convertResult(result));
 
-            if (result instanceof Boolean && (Boolean) result) {
-                indexList.add(IOUtility.convertResult(i));
+            if (result instanceof Boolean && (Boolean) result && !hasIndexList) {
+                indexList.add(i);
             }
         }
 
@@ -108,6 +113,8 @@ public class SpatialOperationExecutor {
     private List<List<Object>> executeIntersectsOperation(List<List<Object>> rawArgList, String geomFormat) {
         List<Object> newNList = new ArrayList<>();
         List<Object> newMList = new ArrayList<>();
+        List<Object> indexList = new ArrayList<>();
+
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
 
@@ -124,9 +131,10 @@ public class SpatialOperationExecutor {
             if (result instanceof Boolean && (Boolean) result) {
                 newNList.add(nList.get(i));
                 newMList.add(mList.get(i));
+                indexList.add(i);
             }
         }
 
-        return List.of(newNList, newMList);
+        return List.of(newNList, newMList, indexList);
     }
 }
