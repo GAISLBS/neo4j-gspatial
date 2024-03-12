@@ -119,18 +119,20 @@ public class SpatialOperationExecutor {
         List<Object> mList = rawArgList.get(1);
 
         for (int i = 0; i < nList.size(); i++) {
-            if (nList.get(i).equals(mList.get(i))) {
+            Object n = nList.get(i);
+            Object m = mList.get(i);
+            if (n.equals(m)) {
                 continue;
             }
-            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
+            List<Object> rawArgs = List.of(n, m);
             log.info(String.format("Running gspatial.INTERSECTS with arguments: %s", rawArgs));
             List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomFormat);
             SpatialOperation operation = SpatialOperation.INTERSECTS;
             Object result = operation.execute(convertedArgs);
 
             if (result instanceof Boolean && (Boolean) result) {
-                newNList.add(nList.get(i));
-                newMList.add(mList.get(i));
+                newNList.add(n);
+                newMList.add(m);
                 indexList.add(i);
             }
         }
