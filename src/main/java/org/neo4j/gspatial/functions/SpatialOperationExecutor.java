@@ -42,74 +42,32 @@ public class SpatialOperationExecutor {
      * @return a stream containing the result of the operation
      */
     public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgList, String geomFormat) {
-        return executeDualOperation(operationName, rawArgList, geomFormat);
-//        if (rawArgList.size() == 1) {
-//            return executeSingleOperation(operationName, rawArgList.get(0), geomFormat);
-//        }
-//        else {
-//            return executeDualOperation(operationName, rawArgList, geomFormat);
-//        }
+        if (rawArgList.size() == 1) {
+            return executeSingleOperation(operationName, rawArgList.get(0), geomFormat);
+        }
+        else {
+            return executeDualOperation(operationName, rawArgList, geomFormat);
+        }
     }
 
-//    private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs, String geomFormat) {
-//        List<Object> resultList = new ArrayList<>();
-//        List<Object> indexList = new ArrayList<>();
-//
-//        for (int i = 0; i < rawArgs.size(); i++) {
-//            List<Object> rawArg = List.of(rawArgs.get(i));
-//            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArg));
-//            List<Object> convertedArgs = IOUtility.argsConverter(rawArg, geomFormat);
-//            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
-//            Object result = operation.execute(convertedArgs);
-//
-//            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
-//                continue;
-//            }
-//
-//            resultList.add(IOUtility.convertResult(result));
-//
-//            if (result instanceof Boolean && (Boolean) result) {
-//                indexList.add(i);
-//            }
-//        }
-//        return Stream.of(new IOUtility.Output(resultList, indexList));
-//    }
+    private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs, String geomFormat) {
+        List<List<Object>> resultList = new ArrayList<>();
 
-//    private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList, String geomFormat) {
-//        boolean hasIndexList = false;
-//        List<Object> resultList = new ArrayList<>();
-//        List<Object> indexList = new ArrayList<>();
-//        String operationNameUpper = operationName.toUpperCase();
-//
-//        if (isSetOperation(operationNameUpper)) {
-//            rawArgList = executeIntersectsOperation(rawArgList, geomFormat);
-//            indexList = rawArgList.get(2);
-//            hasIndexList = true;
-//        }
-//
-//        List<Object> nList = rawArgList.get(0);
-//        List<Object> mList = rawArgList.get(1);
-//
-//        for (int i = 0; i < nList.size(); i++) {
-//            List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
-//            log.info(String.format("Running gspatial.%s with arguments: %s", operationNameUpper, rawArgs));
-//            List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomFormat);
-//            SpatialOperation operation = SpatialOperation.valueOf(operationNameUpper);
-//            Object result = operation.execute(convertedArgs);
-//
-//            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
-//                continue;
-//            }
-//
-//            resultList.add(IOUtility.convertResult(result));
-//
-//            if (result instanceof Boolean && (Boolean) result && !hasIndexList) {
-//                indexList.add(i);
-//            }
-//        }
-//
-//        return Stream.of(new IOUtility.Output(resultList, indexList));
-//    }
+        for (int i = 0; i < rawArgs.size(); i++) {
+            List<Object> rawArg = List.of(rawArgs.get(i));
+            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArg));
+            List<Object> convertedArgs = IOUtility.argsConverter(rawArg, geomFormat);
+            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+            Object result = operation.execute(convertedArgs);
+
+            if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
+                continue;
+            }
+
+            resultList.add(List.of(IOUtility.convertResult(result), rawArg.get(0)));
+        }
+        return Stream.of(new IOUtility.Output(resultList));
+    }
 
     private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList, String geomFormat) {
         List<List<Object>> resultList = new ArrayList<>();
@@ -133,9 +91,7 @@ public class SpatialOperationExecutor {
                 continue;
             }
 
-            resultList.add(List.of(nList.get(i), mList.get(i), IOUtility.convertResult(result)));
-
-            //true인 경우에만 하는 작업은 뺐음.. 뭘 했더라?
+            resultList.add(List.of(IOUtility.convertResult(result), nList.get(i), mList.get(i)));
         }
 
         return Stream.of(new IOUtility.Output(resultList));
@@ -144,7 +100,6 @@ public class SpatialOperationExecutor {
     private List<List<Object>> executeIntersectsOperation(List<List<Object>> rawArgList, String geomFormat) {
         List<Object> newNList = new ArrayList<>();
         List<Object> newMList = new ArrayList<>();
-        List<Object> indexList = new ArrayList<>();
 
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
@@ -164,10 +119,9 @@ public class SpatialOperationExecutor {
             if (result instanceof Boolean && (Boolean) result) {
                 newNList.add(n);
                 newMList.add(m);
-                indexList.add(i);
             }
         }
 
-        return List.of(newNList, newMList, indexList);
+        return List.of(newNList, newMList);
     }
 }
