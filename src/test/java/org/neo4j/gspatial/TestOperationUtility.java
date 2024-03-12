@@ -129,12 +129,10 @@ public class TestOperationUtility {
                             MATCH (m:%s)
                             WITH COLLECT(n) AS n_list, COLLECT(m) AS m_list
                                                         
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result AS results
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
                             
-                            
-                            UNWIND results[0] AS result
-                            UNWIND results[1] AS idx
-                            WITH n_list[idx] AS n, m_list[idx] AS m, result
+                            UNWIND result AS res
+                            WITH res[0] AS n, res[1] AS m, res[2] AS result
                                                         
                             RETURN n.idx, m.idx, result
                             """,

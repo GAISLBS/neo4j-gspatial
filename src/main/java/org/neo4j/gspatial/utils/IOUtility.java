@@ -85,15 +85,22 @@ public class IOUtility {
      * This class represents the output of a spatial operation.
      * It includes a single field 'result' that contains the result of the operation.
      */
+//    public static class Output {
+//        public List<List<Object>> result;
+//        public List<Object> resultList;
+//        public List<Object> indexList;
+//
+//        public Output(List<Object> resultList, List<Object> indexList) {
+//            this.resultList = resultList;
+//            this.indexList = indexList;
+//            this.result = List.of(resultList, indexList);
+//        }
+//    }
+
     public static class Output {
         public List<List<Object>> result;
-        public List<Object> resultList;
-        public List<Object> indexList;
-
-        public Output(List<Object> resultList, List<Object> indexList) {
-            this.resultList = resultList;
-            this.indexList = indexList;
-            this.result = List.of(resultList, indexList);
+        public Output(List<List<Object>> resultList) {
+            this.result = resultList;
         }
     }
 }
