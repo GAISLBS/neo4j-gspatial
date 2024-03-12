@@ -36,9 +36,8 @@ To perform spatial operations, you must adhere to the specified format.\
 where operationName is the name of the operation to be performed,
 argList1 and argList2 are the argument lists required for the operation,
 geomFormat is the format of the geometry (WKT or WKB. WKT by default),
-and result is the list consisted with `resultList` and `indexList`.
-`resultList` consists of results of the operation. 
-And `indexList` consists of information about the valid node indices from the results of the operation.
+and result is the list consisted with `resultList` and `argList1` and `argList2`.
+`resultList` consists of results of the operation.
 use Several Neo4j's Cypher query language as follows:
 
 Topological Operation Example:
@@ -49,8 +48,8 @@ MATCH (m:NodeType2)
 WITH COLLECT(n) as n_list, COLLECT(m) as m_list
 CALL gspatial.operation('CONTAINS', [n_list, m_list], 'WKT') YIELD result
 
-UNWIND result[1] AS idx
-WITH n_list[idx] AS n, m_list[idx] AS m
+UNWIND result AS res
+WITH res[1] AS n, res[2] AS m
 
 WHERE n <> m
 RETURN n.idx, m.idx
@@ -58,38 +57,18 @@ RETURN n.idx, m.idx
 
 This query finds all pairs of nodes of type NodeType1 and NodeType2 that satisfy the CONTAINS condition.
 
-Distance Operation Example:
-```Cypher
-MATCH (n:NodeType1)
-MATCH (m:NodeType2)
-                            
-WITH n, m, COLLECT(n) AS n_list, COLLECT(m) AS m_list
-CALL gspatial.operation('DISTANCE', [n_list, m_list]) YIELD result
-
-WHERE n <> m                            
-UNWIND result[0] AS results
-
-RETURN n.idx, m.idx, results
-```
-
-This query finds all pairs of nodes of type NodeType1 and NodeType2 and calculates the distance between them.
-
 Set Operation Example:
 ```Cypher
 MATCH (n:NodeType1)
 MATCH (m:NodeType2)
 
 WITH COLLECT(n) AS n_list, COLLECT(m) AS m_list                      
-CALL gspatial.operation('intersects', [n_list, m_list]) YIELD result AS results    
+CALL gspatial.operation('UNION', [n_list, m_list]) YIELD result   
                
-UNWIND results[1] AS idx
-WITH n_list[idx] AS n, m_list[idx] AS m
-
-WHERE n <> m                  
-WITH n, m, COLLECT(n.geometry) AS geometries1, COLLECT(m.geometry) AS geometries2                  
-CALL gspatial.operation('UNION', [geometries1, geometries2]) YIELD result
-
-UNWIND result[0] AS results                  
+UNWIND result AS res
+WITH res[1] AS n, res[2] AS m, res[0] AS result
+WHERE n <> m
+         
 RETURN n.idx, m.idx, results
 ```
 
@@ -102,16 +81,19 @@ MATCH (n:NodeType1)
 WITH n, collect(n.geometry) AS geometries
 CALL gspatial.operation('AREA', [geometries]) YIELD result
 
-UNWIND result[0] AS results
-RETURN n.idx, results
+UNWIND result AS res
+WITH n, res[0] AS result
+
+RETURN n.idx, result
 ```
 This query calculates the area of each node of type NodeType1.
 
 ```Cypher
 CALL gspatial.operation('BUFFER', [['010100000000000000000024400000000000002440'], [2.0]], 'WKB') YIELD result
-UNWIND result[0] AS results
+UNWIND result AS res
+WITH res[0] AS result
 
-RETURN results;
+RETURN result;
 ```
 This query creates a buffer of radius 2.0 around a given point.
 
