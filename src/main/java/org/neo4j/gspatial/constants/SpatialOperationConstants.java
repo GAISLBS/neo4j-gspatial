@@ -79,4 +79,9 @@ public final class SpatialOperationConstants {
         return Arrays.asList("CONTAINS", "COVERS", "COVERED_BY", "CROSSES", "DISJOINT", "EQUALS", "INTERSECTS", "OVERLAPS", "TOUCHES", "WITHIN")
                 .contains(operationName.toUpperCase());
     }
+
+    public static boolean isSetOperation(String operationName) {
+        return Arrays.asList("DIFFERENCE", "INTERSECTION", "SYMDIFFERENCE", "UNION")
+                .contains(operationName.toUpperCase());
+    }
 }

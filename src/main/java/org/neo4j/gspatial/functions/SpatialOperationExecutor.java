@@ -1,6 +1,8 @@
 package org.neo4j.gspatial.functions;
 
 import org.locationtech.jts.geom.Geometry;
+import org.neo4j.graphdb.Entity;
+import org.neo4j.graphdb.Node;
 import org.neo4j.gspatial.constants.SpatialOperationConstants.SpatialOperation;
 import org.neo4j.gspatial.utils.IOUtility;
 import org.neo4j.logging.Log;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.math.NumberUtils.max;
+import static org.neo4j.gspatial.constants.SpatialOperationConstants.isSetOperation;
 
 /**
  * This class is responsible for executing spatial operations.
@@ -48,8 +51,7 @@ public class SpatialOperationExecutor {
     }
 
     private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs, String geomFormat) {
-        List<Object> resultList = new ArrayList<>();
-        List<Object> indexList = new ArrayList<>();
+        List<List<Object>> resultList = new ArrayList<>();
 
         for (int i = 0; i < rawArgs.size(); i++) {
             List<Object> rawArg = List.of(rawArgs.get(i));
@@ -62,40 +64,64 @@ public class SpatialOperationExecutor {
                 continue;
             }
 
-            resultList.add(IOUtility.convertResult(result));
-
-            if (result instanceof Boolean && (Boolean) result) {
-                indexList.add(IOUtility.convertResult(i));
-            }
+            resultList.add(List.of(IOUtility.convertResult(result), rawArg.get(0)));
         }
-        return Stream.of(new IOUtility.Output(resultList, indexList));
+        return Stream.of(new IOUtility.Output(resultList));
     }
 
     private Stream<IOUtility.Output> executeDualOperation(String operationName, List<List<Object>> rawArgList, String geomFormat) {
-        List<Object> resultList = new ArrayList<>();
-        List<Object> indexList = new ArrayList<>();
+        List<List<Object>> resultList = new ArrayList<>();
+        String operationNameUpper = operationName.toUpperCase();
+
+        if (isSetOperation(operationNameUpper)) {
+            rawArgList = executeIntersectsOperation(rawArgList, geomFormat);
+        }
 
         List<Object> nList = rawArgList.get(0);
         List<Object> mList = rawArgList.get(1);
 
         for (int i = 0; i < nList.size(); i++) {
             List<Object> rawArgs = List.of(nList.get(i), mList.get(i));
-            log.info(String.format("Running gspatial.%s with arguments: %s", operationName, rawArgs));
+            log.info(String.format("Running gspatial.%s with arguments: %s", operationNameUpper, rawArgs));
             List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomFormat);
-            SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
+            SpatialOperation operation = SpatialOperation.valueOf(operationNameUpper);
             Object result = operation.execute(convertedArgs);
 
             if (result instanceof Geometry && ((Geometry) result).isEmpty()) {
                 continue;
             }
 
-            resultList.add(IOUtility.convertResult(result));
+            resultList.add(List.of(IOUtility.convertResult(result), nList.get(i), mList.get(i)));
+        }
+
+        return Stream.of(new IOUtility.Output(resultList));
+    }
+
+    private List<List<Object>> executeIntersectsOperation(List<List<Object>> rawArgList, String geomFormat) {
+        List<Object> newNList = new ArrayList<>();
+        List<Object> newMList = new ArrayList<>();
+
+        List<Object> nList = rawArgList.get(0);
+        List<Object> mList = rawArgList.get(1);
+
+        for (int i = 0; i < nList.size(); i++) {
+            Object n = nList.get(i);
+            Object m = mList.get(i);
+            if (n.equals(m)) {
+                continue;
+            }
+            List<Object> rawArgs = List.of(n, m);
+            log.info(String.format("Running gspatial.INTERSECTS with arguments: %s", rawArgs));
+            List<Object> convertedArgs = IOUtility.argsConverter(rawArgs, geomFormat);
+            SpatialOperation operation = SpatialOperation.INTERSECTS;
+            Object result = operation.execute(convertedArgs);
 
             if (result instanceof Boolean && (Boolean) result) {
-                indexList.add(IOUtility.convertResult(i));
+                newNList.add(n);
+                newMList.add(m);
             }
         }
 
-        return Stream.of(new IOUtility.Output(resultList, indexList));
+        return List.of(newNList, newMList);
     }
 }
