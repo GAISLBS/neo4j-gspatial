@@ -26,14 +26,14 @@ public class StrTreeOperationExecutor {
             insertNodes(args);
             spatialIndex.build();
             saveIndex(spatialIndex, INDEX_FILE_PATH);
-            return Stream.of(new IOUtility.Output(List.of("Index created and saved successfully.")));
+            return Stream.of(new IOUtility.Output("Index created and saved successfully.", null, null));
         } else {
             boolean success = removeNodes(args);
             if (success) {
                 saveIndex(spatialIndex, INDEX_FILE_PATH);
-                return Stream.of(new IOUtility.Output(List.of("Nodes removed from index successfully.")));
+                return Stream.of(new IOUtility.Output("Nodes removed from index successfully.", null, null));
             } else {
-                return Stream.of(new IOUtility.Output(List.of("Failed to remove some nodes from the index.")));
+                return Stream.of(new IOUtility.Output("Failed to remove some nodes from the index.", null, null));
             }
         }
     }
