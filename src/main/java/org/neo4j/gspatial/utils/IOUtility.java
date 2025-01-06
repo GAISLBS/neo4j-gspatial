@@ -63,14 +63,19 @@ public class IOUtility {
     }
 
     public static class Output {
-        public List<Object> result;
+        public Object result;
+        public Object n;
+        public Object m;
 
-        public Output(List<Object> resultList) {
-            this.result = resultList;
+        public Output(Object result, Object n, Object m) {
+            this.result = result;
+            this.n = n;
+            this.m = m;
         }
 
-        public List<Object> getResult() {
-            return result;
+        public Output(Object result, Object n) {
+            this.result = result;
+            this.n = n;
         }
     }
 

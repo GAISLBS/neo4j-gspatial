@@ -61,7 +61,7 @@ public class SpatialOperationExecutor {
     }
 
     private Stream<IOUtility.Output> executeOperation(String operationName, List<Object> rawArgs, OperationExecutor executor) {
-        List<Object> resultList = new ArrayList<>();
+        List<IOUtility.Output> resultList = new ArrayList<>();
         List<Geometry> convertedArgs = IOUtility.argsConverter(rawArgs);
         SpatialOperation operation = SpatialOperation.valueOf(operationName.toUpperCase());
 
@@ -70,14 +70,14 @@ public class SpatialOperationExecutor {
             Object result = executor.execute(operation, convertedArg);
 
             if (isValidResult(result)) {
-                resultList.add(createOutputEntry(rawArgs.get(i), result, i));
+                resultList.add(new IOUtility.Output(result, rawArgs.get(i)));
             }
         }
-        return Stream.of(new IOUtility.Output(resultList));
+        return resultList.stream();
     }
 
     private Stream<IOUtility.Output> executeOperation(String operationName, List<Object> nList, List<Object> mList, DualOperationExecutor executor, boolean isSetOperation) {
-        List<Object> resultList = new ArrayList<>();
+        List<IOUtility.Output> resultList = new ArrayList<>();
         List<Geometry> convertedNList = IOUtility.argsConverter(nList);
         List<Geometry> convertedMList = IOUtility.argsConverter(mList);
         SpatialOperation operation = SpatialOperation.valueOf(operationName);
@@ -89,11 +89,11 @@ public class SpatialOperationExecutor {
                 Object result = executor.execute(operation, convertedNList.get(i), convertedMList.get(j));
 
                 if (isValidResult(result)) {
-                    resultList.add(createOutputEntry(nArg, mArg, result, i, j));
+                    resultList.add(new IOUtility.Output(result, nArg, mArg));
                 }
             }
         }
-        return Stream.of(new IOUtility.Output(resultList));
+        return resultList.stream();
     }
 
     private boolean isValidResult(Object result) {
