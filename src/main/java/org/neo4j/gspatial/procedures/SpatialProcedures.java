@@ -37,10 +37,25 @@ public class SpatialProcedures {
     public Stream<Output> operation(@Name("operation") String operationName,
                                     @Name("argsList") List<List<Object>> argsList) {
         return executeWithLogging(() -> {
-            SpatialOperationExecutor operationExecutor = new SpatialOperationExecutor(log);
+            SpatialOperationExecutor operationExecutor = new SpatialOperationExecutor(log, tx);
             return operationExecutor.executeOperation(operationName, argsList);
         });
     }
+
+    @Procedure(value = "gspatial.simpleOperation")
+    @Description("Generic method for spatial operations")
+    public Stream<Output> simpleOperation(@Name("operation") String operationName,
+                                    @Name("argNameA") String argNameA,
+                                    @Name(value = "argNameB", defaultValue = "") Object argNameB) {
+        return executeWithLogging(() -> {
+            SpatialOperationExecutor operationExecutor = new SpatialOperationExecutor(log, tx);
+            if (argNameB.toString().isBlank()) {
+                return operationExecutor.executeSimpleOperation(operationName, argNameA, null);
+            }
+            return operationExecutor.executeSimpleOperation(operationName, argNameA, argNameB);
+        });
+    }
+
 
     @Procedure(value = "gspatial.rtree", mode = Mode.WRITE)
     @Description("CRUD method for R-Tree operations")

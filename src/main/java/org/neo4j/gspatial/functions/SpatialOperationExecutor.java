@@ -1,7 +1,10 @@
 package org.neo4j.gspatial.functions;
 
 import org.locationtech.jts.geom.Geometry;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.gspatial.constants.SpatialConstants;
 import org.neo4j.gspatial.constants.SpatialOperationConstants;
 import org.neo4j.gspatial.constants.SpatialOperationConstants.SpatialOperation;
@@ -14,9 +17,11 @@ import java.util.stream.Stream;
 
 public class SpatialOperationExecutor {
     private final Log log;
+    private final Transaction tx;
 
-    public SpatialOperationExecutor(Log log) {
+    public SpatialOperationExecutor(Log log, Transaction tx) {
         this.log = log;
+        this.tx = tx;
     }
 
     public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgList) {
@@ -35,6 +40,36 @@ public class SpatialOperationExecutor {
             log.error(String.format("Operation %s is not supported", operationNameUpper));
             return Stream.empty();
         }
+    }
+
+    public Stream<IOUtility.Output> executeSimpleOperation(String operationName, String argNameA, Object argNameB) {
+        String operationNameUpper = operationName.toUpperCase();
+
+        if (argNameB == null) {
+            return executeSingleOperation(operationNameUpper, getNodes(tx, argNameA));
+        } else if (argNameB instanceof Number) {
+            return executeSingleParamOperation(operationNameUpper, getNodes(tx, argNameA), List.of(argNameB));
+        } else if (argNameB instanceof String) {
+            return executeDualOperation(operationNameUpper, List.of(getNodes(tx, argNameA), getNodes(tx, argNameB.toString())));
+        }
+        log.error(String.format("Unsupported argNameB type: %s", argNameB.getClass().getName()));
+        return Stream.empty();
+    }
+
+    private List<Object> getNodes(Transaction tx, String labelName) {
+        if (labelName == null || labelName.isBlank()) {
+            log.warn("Label name is null or blank. Returning empty list.");
+            return List.of();
+        }
+        List<Object> nodeList = new ArrayList<>();
+        try (ResourceIterator<Node> it = tx.findNodes(Label.label(labelName))) {
+            while (it.hasNext()) {
+                nodeList.add(it.next());
+            }
+        } catch (Exception e) {
+            log.error("Error while fetching nodes with label: " + labelName, e);
+        }
+        return nodeList;
     }
 
     private Stream<IOUtility.Output> executeSingleOperation(String operationName, List<Object> rawArgs) {
@@ -70,7 +105,7 @@ public class SpatialOperationExecutor {
             Object result = executor.execute(operation, convertedArg);
 
             if (isValidResult(result)) {
-                resultList.add(new IOUtility.Output(result, rawArgs.get(i)));
+                resultList.add(new IOUtility.Output(IOUtility.convertResult(result), rawArgs.get(i)));
             }
         }
         return resultList.stream();
@@ -89,7 +124,7 @@ public class SpatialOperationExecutor {
                 Object result = executor.execute(operation, convertedNList.get(i), convertedMList.get(j));
 
                 if (isValidResult(result)) {
-                    resultList.add(new IOUtility.Output(result, nArg, mArg));
+                    resultList.add(new IOUtility.Output(IOUtility.convertResult(result), nArg, mArg));
                 }
             }
         }
