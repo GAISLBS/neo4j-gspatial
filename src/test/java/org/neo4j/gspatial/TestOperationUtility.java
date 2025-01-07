@@ -77,7 +77,7 @@ public class TestOperationUtility {
                             MATCH (m:%s)
                             WITH n_list, COLLECT(m) AS m_list
 
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result, n, m
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD n, m, result
 
                             WHERE %s
                             RETURN %s;
@@ -102,7 +102,7 @@ public class TestOperationUtility {
                             MATCH (m:%s)
                             WITH n_list, COLLECT(m) AS m_list
 
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result, n, m
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD n, m, result
 
                             RETURN n.idx AS n_idx, m.idx AS m_idx, result
                             """,
@@ -125,7 +125,7 @@ public class TestOperationUtility {
                         """
                                 MATCH (n:%s)
                                 WITH COLLECT(n) AS n_list
-                                CALL gspatial.operation('%s', [n_list, [%s]]) YIELD result, n, m
+                                CALL gspatial.operation('%s', [n_list, [%s]]) YIELD n, result
 
                                 RETURN n.idx AS n_idx, result;
                                 """,
@@ -183,7 +183,7 @@ public class TestOperationUtility {
         String cypherQuery = String.format("""
                         MATCH (n:%s)
                         WITH COLLECT(n) AS nList
-                        CALL gspatial.operation('%s', [nList]) YIELD result, n, m
+                        CALL gspatial.operation('%s', [nList]) YIELD n, result
                         
                         RETURN n.idx AS n_idx, result
                         """,
