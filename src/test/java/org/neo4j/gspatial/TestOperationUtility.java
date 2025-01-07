@@ -50,10 +50,10 @@ public class TestOperationUtility {
         public String generateQuery(String nodeType1, String nodeType2, String operation) {
             return switch (this) {
                 case TOPOLOGY ->
-                        buildOperationsQuery(nodeType1, nodeType2, operation, "n_idx <> m_idx AND result = true", "n_idx, m_idx");
+                        buildOperationsQuery(nodeType1, nodeType2, operation, "n.idx <> m.idx AND result = true", "n.idx AS n_idx, m.idx AS m_idx");
                 case SET -> buildSetOperationQuery(nodeType1, nodeType2, operation);
                 case DUAL_ARG ->
-                        buildOperationsQuery(nodeType1, nodeType2, operation, "n_idx <> m_idx", "n_idx, m_idx, result");
+                        buildOperationsQuery(nodeType1, nodeType2, operation, "n.idx <> m.idx", "n.idx AS n_idx, m.idx AS m_idx, result");
                 case PARAM -> buildParamOperationQuery(nodeType1, nodeType2, operation);
             };
         }
@@ -77,10 +77,7 @@ public class TestOperationUtility {
                             MATCH (m:%s)
                             WITH n_list, COLLECT(m) AS m_list
 
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-
-                            UNWIND result AS res
-                            WITH res[0] AS n_idx, res[1] AS m_idx, res[2] AS result
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result, n, m
 
                             WHERE %s
                             RETURN %s;
@@ -105,12 +102,9 @@ public class TestOperationUtility {
                             MATCH (m:%s)
                             WITH n_list, COLLECT(m) AS m_list
 
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result, n, m
 
-                            UNWIND result AS res
-                            WITH res[0] AS n_idx, res[1] AS m_idx, res[2] AS result
-
-                            RETURN n_idx, m_idx, result
+                            RETURN n.idx AS n_idx, m.idx AS m_idx, result
                             """,
                     nodeType1, nodeType2, operation);
         }
@@ -131,12 +125,9 @@ public class TestOperationUtility {
                         """
                                 MATCH (n:%s)
                                 WITH COLLECT(n) AS n_list
-                                CALL gspatial.operation('%s', [n_list, [%s]]) YIELD result
+                                CALL gspatial.operation('%s', [n_list, [%s]]) YIELD result, n, m
 
-                                UNWIND result AS res
-                                WITH res[0] as n_idx, res[1] AS result
-
-                                RETURN n_idx, result;
+                                RETURN n.idx AS n_idx, result;
                                 """,
                         nodeType1, operation, param);
             } catch (NumberFormatException e) {
@@ -159,8 +150,8 @@ public class TestOperationUtility {
                 ? executeSingleInputSpatialQuery(driver, inputArg1, operation)
                 : executeDualInputSpatialQuery(driver, inputArg1, inputArg2, operation);
 
-//        CSVWriter csvWriter = new CSVWriter();
-//        csvWriter.write("neo_" + operation + ".csv", results);
+        CSVWriter csvWriter = new CSVWriter();
+        csvWriter.write("neo_" + operation + ".csv", results);
 
         verifyResults(results, operation);
     }
@@ -192,10 +183,9 @@ public class TestOperationUtility {
         String cypherQuery = String.format("""
                         MATCH (n:%s)
                         WITH COLLECT(n) AS nList
-                        CALL gspatial.operation('%s', [nList]) YIELD result as results
-                        UNWIND results as result
-                        WITH result[0] as n_idx, result[1] as result
-                        RETURN n_idx, result
+                        CALL gspatial.operation('%s', [nList]) YIELD result, n, m
+                        
+                        RETURN n.idx AS n_idx, result
                         """,
                 nodeType, operation);
         return executeQuery(driver, cypherQuery);
