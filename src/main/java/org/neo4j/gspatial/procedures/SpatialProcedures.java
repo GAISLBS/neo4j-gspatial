@@ -42,17 +42,17 @@ public class SpatialProcedures {
         });
     }
 
-    @Procedure(value = "gspatial.simpleOperation")
+    @Procedure(value = "gspatial.labelOperation")
     @Description("Generic method for spatial operations")
-    public Stream<Output> simpleOperation(@Name("operation") String operationName,
+    public Stream<Output> labelOperation(@Name("operation") String operationName,
                                     @Name("argNameA") String argNameA,
                                     @Name(value = "argNameB", defaultValue = "") Object argNameB) {
         return executeWithLogging(() -> {
             SpatialOperationExecutor operationExecutor = new SpatialOperationExecutor(log, tx);
             if (argNameB.toString().isBlank()) {
-                return operationExecutor.executeSimpleOperation(operationName, argNameA, null);
+                return operationExecutor.executeLabelOperation(operationName, argNameA, null);
             }
-            return operationExecutor.executeSimpleOperation(operationName, argNameA, argNameB);
+            return operationExecutor.executeLabelOperation(operationName, argNameA, argNameB);
         });
     }
 

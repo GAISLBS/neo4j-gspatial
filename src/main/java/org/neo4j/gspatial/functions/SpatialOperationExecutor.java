@@ -42,7 +42,7 @@ public class SpatialOperationExecutor {
         }
     }
 
-    public Stream<IOUtility.Output> executeSimpleOperation(String operationName, String argNameA, Object argNameB) {
+    public Stream<IOUtility.Output> executeLabelOperation(String operationName, String argNameA, Object argNameB) {
         String operationNameUpper = operationName.toUpperCase();
 
         if (argNameB == null) {
