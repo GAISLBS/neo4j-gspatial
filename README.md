@@ -105,12 +105,12 @@ Available operations:
 - CONVEX_HULL, DIMENSION, DISTANCE
 - ENVELOPE, LENGTH, SRID
 
-### Simple Direct Spatial Index Operations
-You can create a simple spatial index for a specific node type using the following operations:
+### Direct Label-based Spatial Operations
+You can perform spatial operations directly on geometric objects without using indices. These operations are useful for simple queries or smaller datasets.
 
 #### Topological Operations
 ```cypher
-CALL gspatial.simpleOperation('CONTAINS', 'NodeType1', 'NodeType2') YIELD n, m, result
+CALL gspatial.labelOperation('CONTAINS', 'NodeType1', 'NodeType2') YIELD n, m, result
 WHERE n <> m AND result = true
 RETURN n.idx, m.idx, result;
 ```
@@ -122,7 +122,7 @@ Available operations:
 
 #### Set Operations
 ```cypher
-CALL gspatial.simpleOperation('UNION', 'NodeType1', 'NodeType2') YIELD n, m, result
+CALL gspatial.labelOperation('UNION', 'NodeType1', 'NodeType2') YIELD n, m, result
 RETURN n.idx, m.idx, result
 ```
 
@@ -137,14 +137,14 @@ Available operations:
 #### Other Operations
 ```cypher
 // Area calculation
-CALL gspatial.simpleOperation('AREA', 'NodeType1') YIELD n, result
+CALL gspatial.labelOperation('AREA', 'NodeType1') YIELD n, result
 RETURN n.idx, result
 ```
 This query calculates the area of each node of type NodeType1.
 
 ```cypher
 // Buffer creation
-CALL gspatial.simpleOperation('BUFFER', 'NodeType1', 0.01) YIELD n, result
+CALL gspatial.labelOperation('BUFFER', 'NodeType1', 0.01) YIELD n, result
 RETURN n.idx, result;
 ```
 This query creates a buffer of radius 0.01 around a given point.
@@ -155,6 +155,7 @@ Available operations:
 - ENVELOPE, LENGTH, SRID
 
 ### SGIR-Tree Spatial Index Operations
+You can create a simple spatial index for a specific node type using the following operations:
 
 #### Creating or Update Index
 ```cypher
