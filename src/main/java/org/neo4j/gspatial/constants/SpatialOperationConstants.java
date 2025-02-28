@@ -14,7 +14,14 @@ public final class SpatialOperationConstants {
             Envelope envelope = ((Geometry) args.get(0)).getEnvelopeInternal();
             return List.of(envelope.getMinX(), envelope.getMinY(), envelope.getMaxX(), envelope.getMaxY());
         }, 1),
-        BUFFER(args -> ((Geometry) args.get(0)).buffer((Double) args.get(1)), 2),
+        BUFFER(args -> {
+            Geometry geometry = (Geometry) args.get(0);
+            Double distance = (Double) args.get(1);
+            if (SpatialConstants.SRID.getIntValue() == 4326) {  // WGS84
+                distance = distance / 99300;                    // meters to degrees
+            }
+            return geometry.buffer(distance);
+        }, 2),
         BOUNDARY(args -> ((Geometry) args.get(0)).getBoundary(), 1),
         CENTROID(args -> ((Geometry) args.get(0)).getCentroid(), 1),
         CONTAINS(args -> ((Geometry) args.get(0)).contains((Geometry) args.get(1)), 2),
@@ -25,7 +32,13 @@ public final class SpatialOperationConstants {
         DIFFERENCE(args -> ((Geometry) args.get(0)).difference((Geometry) args.get(1)), 2),
         DIMENSION(args -> ((Geometry) args.get(0)).getDimension(), 1),
         DISJOINT(args -> ((Geometry) args.get(0)).disjoint((Geometry) args.get(1)), 2),
-        DISTANCE(args -> ((Geometry) args.get(0)).distance((Geometry) args.get(1)), 2),
+        DISTANCE(args -> {
+            Double distance = ((Geometry) args.get(0)).distance((Geometry) args.get(1));
+            if (SpatialConstants.SRID.getIntValue() == 4326) {  // WGS84
+                distance = distance * 99300;                    // degrees to meters
+            }
+            return distance;
+        }, 2),
         ENVELOPE(args -> ((Geometry) args.get(0)).getEnvelope(), 1),
         EQUALS(args -> ((Geometry) args.get(0)).equals((Geometry) args.get(1)), 2),
         INTERSECTION(args -> ((Geometry) args.get(0)).intersection((Geometry) args.get(1)), 2),
