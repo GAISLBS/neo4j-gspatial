@@ -50,9 +50,10 @@ public class TestOperationUtility {
         public String generateQuery(String nodeType1, String nodeType2, String operation) {
             return switch (this) {
                 case TOPOLOGY ->
-                        buildOperationsQuery(nodeType1, nodeType2, operation, "n <> m AND result = true", "n.idx, m.idx");
+                        buildOperationsQuery(nodeType1, nodeType2, operation, "n.idx <> m.idx AND result = true", "n.idx AS n_idx, m.idx AS m_idx");
                 case SET -> buildSetOperationQuery(nodeType1, nodeType2, operation);
-                case DUAL_ARG -> buildOperationsQuery(nodeType1, nodeType2, operation, "n <> m", "n.idx, m.idx, result");
+                case DUAL_ARG ->
+                        buildOperationsQuery(nodeType1, nodeType2, operation, "n.idx <> m.idx", "n.idx AS n_idx, m.idx AS m_idx, result");
                 case PARAM -> buildParamOperationQuery(nodeType1, nodeType2, operation);
             };
         }
@@ -70,18 +71,17 @@ public class TestOperationUtility {
         private String buildOperationsQuery(String nodeType1, String nodeType2, String operation, String conditions, String returns) {
             return String.format(
                     """
-                           MATCH (n:%s)
-                           MATCH (m:%s)
+                            MATCH (n:%s)
+                            WITH COLLECT(n) AS n_list
 
-                           WITH COLLECT(n) as n_list, COLLECT(m) as m_list
-                           CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-                           
-                           UNWIND result AS res
-                           WITH res[1] AS n, res[2] AS m, res[0] AS result
+                            MATCH (m:%s)
+                            WITH n_list, COLLECT(m) AS m_list
 
-                           WHERE %s
-                           RETURN %s;
-                           """,
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD n, m, result
+
+                            WHERE %s
+                            RETURN %s;
+                            """,
                     nodeType1, nodeType2, operation, conditions, returns);
         }
 
@@ -97,15 +97,14 @@ public class TestOperationUtility {
             return String.format(
                     """
                             MATCH (n:%s)
+                            WITH COLLECT(n) AS n_list
+
                             MATCH (m:%s)
-                            WITH COLLECT(n) AS n_list, COLLECT(m) AS m_list
-                                                        
-                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD result
-                            
-                            UNWIND result AS res
-                            WITH res[1] AS n, res[2] AS m, res[0] AS result
-                                                        
-                            RETURN n.idx, m.idx, result
+                            WITH n_list, COLLECT(m) AS m_list
+
+                            CALL gspatial.operation('%s', [n_list, m_list]) YIELD n, m, result
+
+                            RETURN n.idx AS n_idx, m.idx AS m_idx, result
                             """,
                     nodeType1, nodeType2, operation);
         }
@@ -125,12 +124,10 @@ public class TestOperationUtility {
                 return String.format(
                         """
                                 MATCH (n:%s)
-                                CALL gspatial.operation('%s', [[n.geometry], [%s]]) YIELD result
-                                
-                                UNWIND result AS res
-                                WITH n, res[0] AS result
+                                WITH COLLECT(n) AS n_list
+                                CALL gspatial.operation('%s', [n_list, [%s]]) YIELD n, result
 
-                                RETURN n.idx, result;
+                                RETURN n.idx AS n_idx, result;
                                 """,
                         nodeType1, operation, param);
             } catch (NumberFormatException e) {
@@ -166,7 +163,7 @@ public class TestOperationUtility {
      * @param cypherQuery the Cypher query to be executed
      * @return a list of maps representing the results of the query
      */
-    private static List<Map<String, Object>> executeQuery(Driver driver, String cypherQuery) {
+    public static List<Map<String, Object>> executeQuery(Driver driver, String cypherQuery) {
         try (Session session = driver.session()) {
             return session.run(cypherQuery).list().stream()
                     .map(TestOperationUtility::recordToMap)
@@ -184,15 +181,12 @@ public class TestOperationUtility {
      */
     private static List<Map<String, Object>> executeSingleInputSpatialQuery(Driver driver, String nodeType, String operation) {
         String cypherQuery = String.format("""
-                MATCH (n:%s)
-                WITH COLLECT(n) AS nList
-                CALL gspatial.operation('%s', [nList]) YIELD result
-                
-                UNWIND result AS res
-                WITH res[0] AS result, res[1] AS n
-                
-                RETURN n.idx, result
-                """,
+                        MATCH (n:%s)
+                        WITH COLLECT(n) AS nList
+                        CALL gspatial.operation('%s', [nList]) YIELD n, result
+                        
+                        RETURN n.idx AS n_idx, result
+                        """,
                 nodeType, operation);
         return executeQuery(driver, cypherQuery);
     }
@@ -234,7 +228,7 @@ public class TestOperationUtility {
      * @param record the Record to convert
      * @return a map representing the Record
      */
-    private static Map<String, Object> recordToMap(Record record) {
+    public static Map<String, Object> recordToMap(Record record) {
         return record.asMap();
     }
 
@@ -244,10 +238,11 @@ public class TestOperationUtility {
      * @param results   the actual results of the operation
      * @param operation the name of the operation
      */
-    private static void verifyResults(List<Map<String, Object>> results, String operation) {
+    public static void verifyResults(List<Map<String, Object>> results, String operation) {
         List<Map<String, Object>> expectedResults = TestIOUtility.loadDataForComparison("py_" + operation);
         sortAndNormalizeResults(results);
         sortAndNormalizeResults(expectedResults);
+        assertEquals(expectedResults.size(), results.size());
         double tolerance = 1e-6;
         for (int i = 0; i < results.size(); i++) {
             Map<String, Object> actual = results.get(i);
@@ -270,8 +265,8 @@ public class TestOperationUtility {
      * @param results the results of the operation
      */
     private static void sortAndNormalizeResults(List<Map<String, Object>> results) {
-        results.sort(Comparator.comparing((Map<String, Object> map) -> (Long) map.getOrDefault("n.idx", Long.MIN_VALUE))
-                .thenComparing(map -> (Long) map.getOrDefault("m.idx", Long.MIN_VALUE)));
+        results.sort(Comparator.comparing((Map<String, Object> map) -> (Long) map.getOrDefault("n_idx", Long.MIN_VALUE))
+                .thenComparing(map -> (Long) map.getOrDefault("m_idx", Long.MIN_VALUE)));
         results.replaceAll(TestOperationUtility::normalizeResult);
     }
 

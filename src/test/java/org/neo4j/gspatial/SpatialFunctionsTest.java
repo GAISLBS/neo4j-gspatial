@@ -50,6 +50,7 @@ public class SpatialFunctionsTest {
         TestIOUtility.loadData(this.driver, "Apartment");
         TestIOUtility.loadData(this.driver, "GoodWayToWalk");
     }
+
     /**
      * Tests the 'EQUALS' operation.
      * The operation is performed between nodes of type 'AgendaArea'.
@@ -59,6 +60,7 @@ public class SpatialFunctionsTest {
     void testEquals() {
         TestOperationUtility.executeOperation(this.driver, "AgendaArea", "AgendaArea", "equals", false);
     }
+
     /**
      * Tests the 'DISJOINT' operation.
      * The operation is performed between nodes of type 'AgendaArea'.
@@ -68,6 +70,7 @@ public class SpatialFunctionsTest {
     void testDisjoint() {
         TestOperationUtility.executeOperation(this.driver, "AgendaArea", "AgendaArea", "disjoint", false);
     }
+
     /**
      * Tests the 'INTERSECTS' operation.
      * The operation is performed between nodes of type 'AgendaArea'.

@@ -10,9 +10,9 @@ public enum RequiredColumns {
     // The 'idx' column, which is converted to an Integer
     IDX("idx", Integer::parseInt),
     // The 'n.idx' column, which is converted to a Long
-    N_IDX("n.idx", Long::parseLong),
+    N_IDX("n_idx", Long::parseLong),
     // The 'm.idx' column, which is converted to a Long
-    M_IDX("m.idx", Long::parseLong),
+    M_IDX("m_idx", Long::parseLong),
     // The 'result' column, which is converted to a Long, Double, or String as appropriate
     RESULT("result", value -> {
         try {
@@ -26,7 +26,8 @@ public enum RequiredColumns {
         }
     }),
     // The 'geometry' column, which is converted to a String with quotes removed
-    GEOMETRY("geometry", value -> String.format("'%s'", value.replace("\"", "")));
+    GEOMETRY("geometry", value -> String.format("%s", value.replace("\"", ""))),
+    DISTANCE("distance", Double::parseDouble);
 
     private final String columnName;
     private final Function<String, Object> converter;

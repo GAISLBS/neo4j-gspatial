@@ -1,12 +1,14 @@
 package org.neo4j.gspatial;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,11 +28,11 @@ class CSVResult {
 }
 
 /**
- * This class provides utility methods for reading a CSV file.
+ * This class provides a method for reading a CSV file.
  * It includes a method for reading a CSV file into a CSVResult object.
  */
 class CSVReader {
-    private static final String DELIMITER = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
+    private static final String DELIMITER = ",";
 
     /**
      * Reads a CSV file and returns a CSVResult object.
@@ -41,23 +43,30 @@ class CSVReader {
      * @throws IOException if an I/O error occurs
      */
     public CSVResult read(String filePath, Set<String> requiredColumns) throws IOException {
-        List<Map<String, String>> dataList = new ArrayList<>();
         List<String> headers;
 
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            headers = Arrays.asList(br.readLine().split(DELIMITER, -1));
+        try (Reader reader = Files.newBufferedReader(Paths.get(filePath))) {
+            CSVParser parser = new CSVParser(reader, CSVFormat.DEFAULT
+                    .withFirstRecordAsHeader()
+                    .withIgnoreHeaderCase()
+                    .withTrim());
 
+            headers = new ArrayList<>(parser.getHeaderNames());
             List<Integer> requiredIndexes = headers.stream()
                     .filter(requiredColumns::contains)
                     .map(headers::indexOf)
+                    .toList();
+
+            List<Map<String, String>> dataList = parser.getRecords().stream().parallel()
+                    .map(record -> {
+                        Map<String, String> dataMap = new HashMap<>();
+                        requiredIndexes.forEach(index -> dataMap.put(headers.get(index), record.get(index)));
+                        return dataMap;
+                    })
                     .collect(Collectors.toList());
 
-            String line;
-            while ((line = br.readLine()) != null) {
-                dataList.add(parseLine(headers, line, requiredIndexes));
-            }
+            return new CSVResult(dataList, headers);
         }
-        return new CSVResult(dataList, headers);
     }
 
     /**
@@ -79,7 +88,7 @@ class CSVReader {
 }
 
 /**
- * This class provides utility methods for writing data to a CSV file.
+ * This class provides a method for writing data to a CSV file.
  */
 class CSVWriter {
     private static final String RESOURCE_PATH = "src/test/resources";
@@ -116,7 +125,7 @@ class CSVWriter {
 }
 
 /**
- * This class provides utility methods for loading data into a Neo4j database.
+ * This class provides a method for loading data into a Neo4j database.
  */
 class Neo4jLoader {
     /**
@@ -127,39 +136,20 @@ class Neo4jLoader {
      * @param session   the Neo4j session
      */
     public void loadToNeo4j(CSVResult csvResult, String label, Session session) {
-        for (Map<String, String> data : csvResult.dataList) {
-            String insertQuery = buildInsertQuery(label, data);
-            session.run(insertQuery);
-        }
-    }
-
-    /**
-     * Builds a Cypher query for inserting a node with the given label and data.
-     *
-     * @param label the label of the node
-     * @param data  the data of the node
-     * @return the generated Cypher query
-     */
-    private String buildInsertQuery(String label, Map<String, String> data) {
-        StringBuilder properties = new StringBuilder();
-        for (RequiredColumns column : RequiredColumns.values()) {
-            String header = column.getColumnName();
-            String value = data.get(header);
-            if (value != null) {
-                Object convertedValue = column.getConverter().apply(value);
-                properties.append(String.format("%s: %s, ", header, convertedValue));
-            }
-        }
-        if (properties.length() > 0) {
-            properties.setLength(properties.length() - 2);
-        }
-        return String.format("CREATE (a:%s {%s})", label, properties);
+        DataConverter converter = new DataConverter();
+        List<Map<String, Object>> convertedBatch = csvResult.dataList.stream()
+                .map(converter::convert)
+                .toList();
+        String properties = csvResult.headers.stream()
+                .map(header -> String.format("%s: row.%s", header, header))
+                .collect(Collectors.joining(", "));
+        String query = String.format("UNWIND $data as row CREATE (n:%s {%s})", label, properties);
+        Map<String, Object> params = Collections.singletonMap("data", convertedBatch);
+        session.run(query, params);
     }
 }
 
-/**
- * This class provides utility methods for converting data.
- */
+
 class DataConverter {
     /**
      * Converts the given data to the appropriate format.
@@ -186,7 +176,7 @@ class DataConverter {
  */
 public class TestIOUtility {
     private static final String RESOURCE_PATH = "src/test/resources";
-    private static Set<String> requiredColumns = Arrays.stream(RequiredColumns.values())
+    private static final Set<String> requiredColumns = Arrays.stream(RequiredColumns.values())
             .map(RequiredColumns::getColumnName)
             .collect(Collectors.toSet());
 
@@ -215,6 +205,7 @@ public class TestIOUtility {
             CSVResult csvResult = readCSVFile(label, requiredColumns);
             Neo4jLoader loader = new Neo4jLoader();
             loader.loadToNeo4j(csvResult, label, session);
+            makeConstraints(driver, label);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load data: " + e.getMessage());
         }
@@ -238,6 +229,19 @@ public class TestIOUtility {
             return dataList;
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Makes constraints for the given label.
+     *
+     * @param driver the Neo4j driver
+     * @param label  the label for which to make constraints
+     */
+    private static void makeConstraints(Driver driver, String label) {
+        try (Session session = driver.session()) {
+            String queryString = String.format("CREATE CONSTRAINT FOR (a: %s) REQUIRE a.idx IS UNIQUE", label);
+            session.run(queryString);
         }
     }
 }

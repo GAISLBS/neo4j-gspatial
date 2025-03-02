@@ -1,106 +1,130 @@
 package org.neo4j.gspatial.utils;
 
+import org.geotools.geojson.geom.GeometryJSON;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.locationtech.jts.geom.Geometry;
 import org.neo4j.graphdb.Node;
+import org.neo4j.gspatial.constants.SpatialConstants;
+import org.neo4j.gspatial.index.rtree.EnvelopeDecoderFromBbox;
+import org.neo4j.gspatial.index.rtree.JtsGeometryDecoderFromNode;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * This class provides utility methods to convert input and output for spatial operations.
- * It includes methods for converting arguments and results to the appropriate format.
- */
-public class IOUtility {
-    private static final String BUFFER_OPERATION = "BUFFER";
+import static org.neo4j.gspatial.utils.GeometryUtility.parseCoordinates;
+import static org.neo4j.gspatial.utils.GeometryUtility.parseGeometry;
 
-    /**
-     * Converts the given arguments to the appropriate format for spatial operations.
-     * Each argument is converted using the convertArg method.
-     *
-     * @param args          the arguments for the operation
-     * @return the converted arguments
-     */
-    public static List<Object> argsConverter(List<Object> args, String geomFormat) {
-        List<Object> processedArgs = new ArrayList<>();
+public class IOUtility {
+    private static final String geometryName = SpatialConstants.GEOMETRYNAME.getValue();
+    private static final String bbox = SpatialConstants.BBOX.getValue();
+    private static final String uuid = SpatialConstants.UUIDNAME.getValue();
+    public static final EnvelopeDecoderFromBbox bboxDecoder = new EnvelopeDecoderFromBbox(bbox);
+    public static final JtsGeometryDecoderFromNode geometryDecoder = new JtsGeometryDecoderFromNode(geometryName);
+
+    public static List<Geometry> argsConverter(List<Object> args) {
+        List<Geometry> processedArgs = new ArrayList<>();
         for (Object arg : args) {
-            processedArgs.add(convertArg(arg, geomFormat));
+            Geometry convertedArg = convertArg(arg);
+            if (convertedArg != null) {
+                processedArgs.add(convertedArg);
+            }
         }
         return processedArgs;
     }
 
-    /**
-     * Converts the given argument for spatial operations based on its type.
-     * If the argument is a Node, it is converted using the convertNode method.
-     * If the argument is a String, it is converted to a Geometry object using the GeometryUtility.parseWKT method.
-     * If the argument is a Double and the operation is BUFFER, the argument is returned as is.
-     *
-     * @param arg           the argument to convert
-     * @return the converted argument
-     */
-    private static Object convertArg(Object arg, String geomFormat) {
+    private static Geometry convertArg(Object arg) {
         if (arg instanceof Node) {
-            return convertNode((Node) arg, geomFormat);
+            return convertNode((Node) arg);
+        } else if (arg instanceof String) {
+            return parseGeometry((String) arg);
+        } else if (arg instanceof double[]) {
+            return parseCoordinates((double[]) arg);
+        } else if (arg instanceof double[][]) {
+            return parseCoordinates((double[][]) arg);
         }
-        if (arg instanceof String) {
-            if (geomFormat.equals("WKB")) {
-                return GeometryUtility.parseWKB((String) arg);
-            }
-            if (geomFormat.equals("WKT")){
-                return GeometryUtility.parseWKT((String) arg);
-            }
-        }
-        return arg;
+        throw new IllegalArgumentException("Unsupported argument type: " + arg.getClass().getSimpleName());
     }
 
-    /**
-     * Converts the given Node to a Geometry object.
-     * If the Node has a 'geometry' property, the property value is converted to a Geometry object using the GeometryUtility.parseWKT method.
-     *
-     * @param node the Node to convert
-     * @return the converted Geometry object
-     * @throws IllegalArgumentException if the Node does not have a 'geometry' property
-     */
-    private static Object convertNode(Node node, String geomFormat) {
-        if (node.hasProperty("geometry")) {
-            if (geomFormat.equals("WKB"))
-                return GeometryUtility.parseWKB(node.getProperty("geometry").toString());
-            else if (geomFormat.equals("WKT"))
-                return GeometryUtility.parseWKT(node.getProperty("geometry").toString());
+    public static Geometry convertNode(Node node) {
+        if (node.hasProperty(geometryName)) {
+            return geometryDecoder.decodeGeometry(node);
+        } else if (node.hasProperty(bbox)) {
+            return bboxDecoder.decodeEnvelope(node).toGeometry();
         }
-        throw new IllegalArgumentException("Node does not have a 'geometry' property");
+        throw new IllegalArgumentException("Node with ID " + node.getElementId() + " does not have a 'geometry' property");
     }
 
-    /**
-     * Converts the result of a spatial operation to the appropriate format.
-     * If the result is a Geometry object, the result is converted to a String using the toString method.
-     *
-     * @param result the result to convert
-     * @return the converted result
-     */
     public static Object convertResult(Object result) {
         return result instanceof Geometry ? result.toString() : result;
     }
 
-    /**
-     * This class represents the output of a spatial operation.
-     * It includes a single field 'result' that contains the result of the operation.
-     */
-//    public static class Output {
-//        public List<List<Object>> result;
-//        public List<Object> resultList;
-//        public List<Object> indexList;
-//
-//        public Output(List<Object> resultList, List<Object> indexList) {
-//            this.resultList = resultList;
-//            this.indexList = indexList;
-//            this.result = List.of(resultList, indexList);
-//        }
-//    }
-
     public static class Output {
-        public List<List<Object>> result;
-        public Output(List<List<Object>> resultList) {
-            this.result = resultList;
+        public Object result;
+        public Object n;
+        public Object m;
+
+        public Output(Object result, Object n, Object m) {
+            this.result = result;
+            this.n = n;
+            this.m = m;
         }
+
+        public Output(Object result, Object n) {
+            this.result = result;
+            this.n = n;
+        }
+    }
+
+    public static JSONObject convertNodeToGeoJson(Node node) {
+        JSONObject feature = new JSONObject();
+        feature.put("type", "Feature");
+
+        JSONObject properties = new JSONObject();
+        if (node.hasProperty(uuid)) {
+            properties.put("idx", node.getProperty(uuid).toString());
+        }
+
+        Geometry geom = convertNode(node);
+        JSONObject geometry = new JSONObject();
+        GeometryJSON gjson = new GeometryJSON();
+        try (StringWriter writer = new StringWriter()) {
+            gjson.write(geom, writer);
+            geometry = (JSONObject) new JSONParser().parse(writer.toString());
+        } catch (Exception e) {
+            throw new RuntimeException("Error converting geometry to GeoJSON", e);
+        }
+
+        feature.put("geometry", geometry);
+        feature.put("properties", properties);
+
+        return feature;
+    }
+
+    public static void saveToGeoJson(List<Node> entryList, String fileName) {
+        JSONObject featureCollection = new JSONObject();
+        featureCollection.put("type", "FeatureCollection");
+
+        List<JSONObject> features = new ArrayList<>();
+        for (Node entry : entryList) {
+            features.add(convertNodeToGeoJson(entry));
+        }
+        featureCollection.put("features", features);
+
+        try (FileWriter fileWriter = new FileWriter(fileName)) {
+            fileWriter.write(featureCollection.toJSONString());
+        } catch (IOException e) {
+            throw new RuntimeException("Error writing GeoJSON to file", e);
+        }
+    }
+
+    public static void setSpatialConstants(String geomFormat, String uuidName, String geomName, String srid) {
+        SpatialConstants.GeometryFormat.setValue(geomFormat.toUpperCase());
+        SpatialConstants.UUIDNAME.setValue(uuidName);
+        SpatialConstants.GEOMETRYNAME.setValue(geomName);
+        SpatialConstants.SRID.setValue(Integer.parseInt(srid));
     }
 }
