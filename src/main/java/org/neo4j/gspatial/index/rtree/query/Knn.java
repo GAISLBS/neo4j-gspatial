@@ -30,6 +30,7 @@ public class Knn {
     private final List<Node> layers;
     private final ProgressLoggingListener progressListener;
     private final JtsGeometryDecoderFromNode geometryDecoder;
+    private final KnnVisitor visitor;
 
     public Knn(Transaction tx, List<Node> layers, List<Object> args, ProgressLoggingListener progressListener) {
         this.tx = tx;
@@ -39,6 +40,7 @@ public class Knn {
         this.k = ((Long) args.get(1)).intValue();
         this.nearestNodes = new PriorityQueue<>(k, Comparator.comparingDouble(KnnOutput::getDistance).reversed());
         this.progressListener = progressListener;
+        this.visitor = new KnnVisitor(queryPoint, nearestNodes, k, geometryDecoder);
     }
 
     private Geometry decodeQueryPoint(Object arg) {
@@ -54,7 +56,6 @@ public class Knn {
     }
 
     public Stream<KnnOutput> query() {
-        KnnVisitor visitor = new KnnVisitor(queryPoint, nearestNodes, k, geometryDecoder);
 
         List<KnnOutput> initialNodes = new ArrayList<>();
         for (Node layer : layers) {
@@ -65,19 +66,18 @@ public class Knn {
 
         initialNodes.sort(Comparator.comparingDouble(KnnOutput::getDistance));
         for (KnnOutput knnOutput : initialNodes) {
-            visitKnn(visitor, knnOutput.getNode());
+            visitKnn(knnOutput.getNode());
         }
 
         return nearestNodes.stream();
     }
 
-    public void visitKnn(KnnVisitor visitor, Node indexNode) {
+    public void visitKnn(Node indexNode) {
         if (indexNode.hasRelationship(Direction.OUTGOING, RTreeRelationshipTypes.RTREE_CHILD)) {
             List<KnnOutput> children = new ArrayList<>();
             for (Relationship rel : indexNode.getRelationships(Direction.OUTGOING, RTreeRelationshipTypes.RTREE_CHILD)) {
-                Node child = rel.getEndNode();
-                double distance = QueryUtils.getIndexNodeEnvelope(child).distance(visitor.getQueryPointCoords());
-                children.add(new KnnOutput(child, distance));
+                double distance = QueryUtils.getRelationEnvelope(rel).distance(visitor.getQueryPointCoords());
+                children.add(new KnnOutput(rel, distance));
             }
             progressListener.updateVisitedIndexCount(children.size());
             children.sort(Comparator.comparingDouble(KnnOutput::getDistance));
@@ -85,7 +85,7 @@ public class Knn {
                 if (child.getDistance() > visitor.getNnDistTemp()) {
                     return;
                 }
-                visitKnn(visitor, child.getNode());
+                visitKnn(child.getNode());
             }
         } else if (indexNode.hasRelationship(Direction.OUTGOING, RTreeRelationshipTypes.RTREE_REFERENCE)) {
             int geometryCount = 0;

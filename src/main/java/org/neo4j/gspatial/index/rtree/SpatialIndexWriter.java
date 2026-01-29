@@ -13,6 +13,8 @@ public interface SpatialIndexWriter extends SpatialIndexReader {
 
     void remove(Transaction tx, String geomNodeId, boolean deleteGeomNode, boolean throwExceptionIfNotFound);
 
+    void remove(Transaction tx, Node geomNode, boolean deleteGeomNode, boolean throwExceptionIfNotFound);
+
     void removeAll(Transaction tx, boolean deleteGeomNodes, Listener monitor);
 
     void clear(Transaction tx, Listener monitor);

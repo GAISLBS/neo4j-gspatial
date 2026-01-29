@@ -4,7 +4,7 @@
 'gspatial' is a plugin for Neo4j that implements the [SGIR-Tree](https://www.mdpi.com/2220-9964/13/10/346) (Subgraph Integrated R-Tree) structure for efficient spatial data handling in graph databases. Unlike existing Neo4j spatial plugins that only support operations between whole layer node sets and specified node sets and their disconnected index approach, gspatial is specifically designed for offering improved spatial operation and query processing through direct integration with the graph structure.
 
 Key features of the gspatial approach include:
-- Support for spatial operations between any arbitary node sets
+- Support for spatial operations between any arbitrary node sets
 - Direct integration of R-Tree spatial indexing within the graph database structure
 - Efficient spatial query processing through subgraph-based index organization
 - Seamless combination of spatial searches and graph traversals
@@ -15,15 +15,20 @@ The plugin leverages the Java Topology Suite ([JTS](https://locationtech.github.
 So, you can check the Geometry(org.locationtech.jts.geom.Geometry) methods of JTS for more information about the spatial operations.
 
 ## Prerequisites
-- Neo4j Desktop version 5.22.0 for using the plugin
-- Java 17, Maven for building the plugin from source
+- Neo4j Desktop version 2025.07.1 for using the plugin
+- Java 21, Gradle for building the plugin from source
 
 ## Installation
 1. Download the neo4j-gspatial.jar file from release
 2. Copy the downloaded jar file to the plugins directory of your Neo4j installation
    (you can find the plugins directory in the Neo4j Desktop settings
    or default path is .Neo4jDesktop/relate-data/dbmss/dbms-id/plugins/)
-3. Restart your Neo4j server
+3. Add the following line to the neo4j.conf file of your Neo4j installation
+```
+dbms.security.procedures.unrestricted=gspatial.*
+dbms.security.procedures.allowlist=gspatial.*
+```
+4. Restart your Neo4j server
 
 ## Configuration
 Before using any spatial operations or indices, you must configure the gspatial plugin settings for your database. This step is mandatory and should match your data structure when restarting the Neo4j server:
@@ -43,13 +48,13 @@ You can perform spatial operations directly on geometric objects without using i
 
 #### Topological Operations
 ```cypher
-MATCH (n:NodeType1)
-WITH n, COLLECT(n) AS n_list
+MATCH (u:NodeType1)
+WITH u, COLLECT(u) AS u_list
 
-MATCH (m:NodeType2)
-WITH n, m, n_list, COLLECT(m) AS m_list
+MATCH (v:NodeType2)
+WITH u, v, u_list, COLLECT(v) AS v_list
 
-CALL gspatial.operation('CONTAINS', [n_list, m_list]) YIELD n, m, result
+CALL gspatial.operation('CONTAINS', [u_list, v_list]) YIELD n, m, result
 
 WHERE n <> m AND result = true
 RETURN n.idx, m.idx, result;
@@ -62,13 +67,13 @@ Available operations:
 
 #### Set Operations
 ```cypher
-MATCH (n:NodeType1)
-WITH COLLECT(n) AS n_list
+MATCH (u:NodeType1)
+WITH COLLECT(u) AS u_list
 
-MATCH (m:NodeType2)
-WITH n_list, COLLECT(m) AS m_list
+MATCH (v:NodeType2)
+WITH u_list, COLLECT(v) AS v_list
 
-CALL gspatial.operation('UNION', [n_list, m_list]) YIELD n, m, result
+CALL gspatial.operation('UNION', [u_list, v_list]) YIELD n, m, result
 
 RETURN n.idx, m.idx, result
 ```
@@ -84,18 +89,18 @@ Available operations:
 #### Other Operations
 ```cypher
 // Area calculation
-MATCH (n:NodeType1)
-WITH COLLECT(n) AS n_list
-CALL gspatial.operation('AREA', [n_list]) YIELD n, result
+MATCH (u:NodeType1)
+WITH COLLECT(u) AS u_list
+CALL gspatial.operation('AREA', [u_list]) YIELD n, result
 RETURN n.idx, result
 ```
 This query calculates the area of each node of type NodeType1.
 
 ```cypher
 // Buffer creation
-MATCH (n:NodeType1)
-WITH n, COLLECT(n) AS n_list
-CALL gspatial.operation('BUFFER', [n_list, [0.01]]) YIELD n, result
+MATCH (u:NodeType1)
+WITH u, COLLECT(u) AS u_list
+CALL gspatial.operation('BUFFER', [u_list, [0.01]]) YIELD n, result
 RETURN n.idx, result;
 ```
 This query creates a buffer of radius 0.01 around a given point.
@@ -155,7 +160,10 @@ Available operations:
 - ENVELOPE, LENGTH, SRID
 
 ### SGIR-Tree Spatial Index Operations
-You can create a simple spatial index for a specific node type using the following operations:
+※ Before building the SGIR-Tree, you must set a UNIQUE constraint on the UUID property for each node label.
+```cypher
+CREATE CONSTRAINT node_type1_uuid_unique IF NOT EXISTS FOR (n:NodeType1) REQUIRE n.uuid IS UNIQUE
+```
 
 #### Creating or Update Index
 ```cypher
@@ -173,10 +181,6 @@ MATCH (n:NodeType1)
 WHERE n.uuid IN ["uuid1", "uuid2"]
 WITH COLLECT(n) AS delete_nodes
 CALL gspatial.rtree("delete", delete_nodes, "NodeType1") YIELD result
-RETURN result
-
-// Delete entire index
-CALL gspatial.rtree("deleteAll", [], "NodeType1") YIELD result
 RETURN result
 ```
 
@@ -232,12 +236,13 @@ RETURN DISTINCT node1.idx AS n_idx, node2.idx AS m_idx
 
 ## Building from Source
 ```bash
-mvn clean package
+./gradlew shadowJar
 ```
+The output JAR will be located at `build/libs/gspatial-1.1.0.jar`
 
 ## Testing
 ```bash
-mvn test
+./gradlew test
 ```
 
 The test suite includes comprehensive tests for:
@@ -246,6 +251,17 @@ The test suite includes comprehensive tests for:
 - Index maintenance and optimization
 - Direct spatial operations
 
+### Integration Tests
+Some tests require a running Neo4j instance. To run these:
+1. Copy `.env.example` to `.env`
+2. Fill in your Neo4j credentials:
+```
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_password
+```
+3. Run `./gradlew test`
+
 ## Performance
 Based on experimental results, the SGIR-Tree implementation shows significant improvements over traditional approaches:
 - Up to 24x faster query execution compared to external spatial indices
@@ -253,12 +269,12 @@ Based on experimental results, the SGIR-Tree implementation shows significant im
 - Efficient handling of large-scale spatial datasets
 
 ## Limitations
-- Currently supports only WKT format for spatial objects
-- Limited to WGS84 coordinate system
-- Tested primarily on Neo4j Desktop version 5.22.0
+- Currently supports WKT and WKB formats for spatial objects
+- Default coordinate system is WGS84 (SRID 4326)
+- Tested primarily on Neo4j Desktop version 5.22.0 and 2025.07.1.
 
 ## Contributing
-Contributions are welcome! Please feel free to submit pull requests or create issues for bugs and feature requests.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 

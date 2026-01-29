@@ -26,7 +26,7 @@ public class SpatialOperationExecutor {
 
     public Stream<IOUtility.Output> executeOperation(String operationName, List<List<Object>> rawArgList) {
         String operationNameUpper = operationName.toUpperCase();
-//        log.info(String.format("Running gspatial.%s", operationNameUpper));
+        log.info(String.format("Running gspatial.%s", operationNameUpper));
 
         if (SpatialOperationConstants.isSingOperation(operationNameUpper)) {
             return executeSingleOperation(operationNameUpper, rawArgList.get(0));

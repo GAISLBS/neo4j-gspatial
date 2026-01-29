@@ -16,10 +16,14 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class RTreeTestUtils {
+    private static final String SETTING_QUERY = "CALL gspatial.setConfig(\"WKT\", \"uuid\", \"geometry\", \"4326\")";
     private static final String MATCH_QUERY = "MATCH (n:%s) WITH collect(n) as nodes";
     private static final String MATCH_WHERE_QUERY = "MATCH (n:%s) WHERE %s WITH collect(n) as nodes";
-    private static final String DELETE_QUERY = "CALL gspatial.rtree(\"delete\", %s) YIELD result";
+    private static final String DELETE_RTREE_QUERY = "MATCH (n:%sRTree) DETACH DELETE n;";
+    private static final String DELETE_RTREE_DISCONNECTED_QUERY = "MATCH (n:%sComparisonRTree) DETACH DELETE n;";
+    private static final String DELETE_QUERY = "CALL gspatial.rtree(\"delete\", %s, \"%s\") YIELD result";
     private static final String INSERT_QUERY = "CALL gspatial.rtree(\"insert\", nodes, \"%s\") YIELD result";
+    private static final String INSERT_DISCONNECTED_QUERY = "CALL gspatial.rtree(\"insert\", nodes, \"%s\", true) YIELD result";
     private static final String STRTREE_INSERT_QUERY = "CALL gspatial.strtree(\"insert\", nodes, \"%s\") YIELD result";
     private static final String STRTREE_RANGE_QUERY_BOX = "CALL gspatial.strtree.query.range([\"%s\"], [%f, %f, %f, %f])\n";
     private static final String STRTREE_RANGE_QUERY = "CALL gspatial.strtree.query.range([\"%s\"], [[%f, %f], %f])\n";
@@ -59,23 +63,43 @@ public class RTreeTestUtils {
     }
 
     public static void executeDeleteN(Driver driver, String label, String condition) {
-        String createQuery = String.format(MATCH_QUERY, label) + " " + INSERT_QUERY;
+        String createQuery = String.format(MATCH_QUERY, label) + " " + String.format(INSERT_QUERY, label);
         String matchQuery = String.format(MATCH_WHERE_QUERY, label, condition);
-        String deleteQuery = String.format(DELETE_QUERY, "nodes");
+        String deleteQuery = String.format(DELETE_QUERY, "nodes", label);
         executeQuery(driver, createQuery + " " + matchQuery + " " + deleteQuery + " " + RETURN_RESULT);
     }
 
     public static List<Map<String, Object>> executeDeleteAll(Driver driver, String label) {
-        String createQuery = String.format(MATCH_QUERY, label) + " " + INSERT_QUERY;
+        String createQuery = String.format(MATCH_QUERY, label) + " " + String.format(INSERT_QUERY, label);
         String matchQuery = String.format(MATCH_QUERY, label);
-        String deleteQuery = String.format(DELETE_QUERY, "[]");
+        String deleteQuery = String.format(DELETE_QUERY, "[]", label);
         return executeQuery(driver, createQuery + " as rootNode " + matchQuery + " " + deleteQuery + " " + RETURN_RESULT);
+    }
+
+    public static void executeInitialSetup(Driver driver) {
+        executeQuery(driver, SETTING_QUERY);
+    }
+
+    public static void executeDeleteRTree(Driver driver, String label) {
+        executeQuery(driver, String.format(DELETE_RTREE_QUERY, label));
+    }
+
+    public static void executeDeleteRTreeDisconnected(Driver driver, String label) {
+        executeQuery(driver, String.format(DELETE_RTREE_DISCONNECTED_QUERY, label));
     }
 
     public static void executeInsert(Driver driver, String... labels) {
         for (String label : labels) {
             String matchQuery = String.format(MATCH_QUERY, label);
             String insertQuery = String.format(INSERT_QUERY, label);
+            executeQuery(driver, matchQuery + " " + insertQuery + " " + RETURN_RESULT);
+        }
+    }
+
+    public static void executeInsertDisconnected(Driver driver, String... labels) {
+        for (String label : labels) {
+            String matchQuery = String.format(MATCH_QUERY, label);
+            String insertQuery = String.format(INSERT_DISCONNECTED_QUERY, label);
             executeQuery(driver, matchQuery + " " + insertQuery + " " + RETURN_RESULT);
         }
     }
@@ -91,7 +115,7 @@ public class RTreeTestUtils {
     public static void executeStrTreeRangeQuery(Driver driver, String[] labels, double[] bbox) {
         String labelsString = String.join("\", \"", labels);
         String query = String.format(STRTREE_RANGE_QUERY_BOX, labelsString, bbox[0], bbox[1], bbox[2], bbox[3]);
-        List<Map<String, Object>> results = executeQuery(driver, query + " " + RANGE_RESULT);
+        List<Map<String, Object>> results = executeQuery(driver, query + " " + RANGE_YIELD + " " + RANGE_RESULT);
         verifyResults(results, "range_query_", String.join("_", labels), "Range");
     }
 
@@ -99,26 +123,19 @@ public class RTreeTestUtils {
         String labelsString = String.join("\", \"", labels);
         String query = String.format(STRTREE_RANGE_QUERY, labelsString, point[0], point[1], distance);
         String distanceFormatted = String.format(MessageFormat.format("%.{0}f", getDecimalPlaces(distance)), distance);
-        List<Map<String, Object>> results = executeQuery(driver, query + " " + RANGE_RESULT);
+        List<Map<String, Object>> results = executeQuery(driver, query + " " + RANGE_YIELD + " " + RANGE_RESULT);
         verifyResults(results, String.format("range_query_buffer_%s_", distanceFormatted), String.join("_", labels), "Range");
     }
 
     public static void executeStrTreeRangeTraverseQuery(Driver driver, String[] labels, double[] point, double distance) {
         String labelsString = String.join("\", \"", labels);
         String query = String.format(STRTREE_RANGE_QUERY, labelsString, point[0], point[1], distance);
-        String traverse_query = String.format(TRAVERSE_MATCH_QUERY, "node");
-        List<Map<String, Object>> results = executeQuery(driver, query + RANGE_YIELD + traverse_query + RANGE_RESULT);
+        List<Map<String, Object>> results = executeQuery(driver, query + RANGE_YIELD + RANGE_RESULT);
     }
 
     public static void executeDeleteALeafNode(Driver driver, String label) {
-        String query = String.format("MATCH(a:%s)" +
-                "WHERE a.idx = 62\n" +
-                "    OR a.idx = 58\n" +
-                "    OR a.idx = 47\n" +
-                "    OR a.idx = 20\n" +
-                "    OR a.idx = 14\n" +
-                "    OR a.idx = 7\n" +
-                "    OR a.idx = 2\n" +
+        String query = String.format("MATCH(a:%s)\n" +
+                "WHERE a.idx IN [62, 58, 47, 20, 14, 7, 2]\n" +
                 "WITH COLLECT(a) AS nodes\n" +
                 "CALL gspatial.rtree('delete', nodes, '%s') YIELD result", label, label);
         executeQuery(driver, query + " " + RETURN_RESULT);

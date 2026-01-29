@@ -77,6 +77,10 @@ public class IOUtility {
             this.result = result;
             this.n = n;
         }
+
+        public Output(List<Object> result) {
+            this.result = result;
+        }
     }
 
     public static JSONObject convertNodeToGeoJson(Node node) {

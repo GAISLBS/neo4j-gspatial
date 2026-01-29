@@ -26,15 +26,13 @@ public class Range {
     private final ProgressLoggingListener progressListener;
     private final EnvelopeDecoderFromBbox bboxDecoder = new EnvelopeDecoderFromBbox("bbox");
     private final EnvelopeDecoderFromJtsGeometry geometryDecoder = new EnvelopeDecoderFromJtsGeometry(SpatialConstants.GEOMETRYNAME.getValue());
-    private final String cypherQuery;
 
-    public Range(Transaction tx, List<Node> layers, List<Object> args, String cypherQuery, ProgressLoggingListener progressListener) {
+    public Range(Transaction tx, List<Node> layers, List<Object> args, ProgressLoggingListener progressListener) {
         this.tx = tx;
         this.layers = layers;
         this.searchEnvelope = decodeReferenceEnvelope(args);
         this.searchGeometry = searchEnvelope.toGeometry();
         this.progressListener = progressListener;
-        this.cypherQuery = cypherQuery;
     }
 
     private Envelope decodeReferenceEnvelope(List<Object> args) {
@@ -57,28 +55,10 @@ public class Range {
     public Stream<RangeOutput> query() {
         List<Node> candidateNodes = searchTree(layers, new ArrayList<>());
         progressListener.worked(1, "Done searching index");
-        candidateNodes = filterCandidatesWithCypher(candidateNodes);
         progressListener.updateCandidateGeometryCount(candidateNodes.size());
         return candidateNodes.parallelStream()
                 .filter(this::isWithinSearchEnvelope)
                 .map(RangeOutput::new);
-    }
-
-    private List<Node> filterCandidatesWithCypher(List<Node> candidateNodes) {
-        if (cypherQuery == null || cypherQuery.isEmpty()) {
-            return candidateNodes;
-        }
-
-        List<Node> filteredNodes = new ArrayList<>();
-        for (Node node : candidateNodes) {
-            String query = String.format("WITH $node AS n %s", cypherQuery);
-            Map<String, Object> params = Map.of("node", node);
-            Result result = tx.execute(query, params);
-            if (result.hasNext()) {
-                filteredNodes.add(node);
-            }
-        }
-        return filteredNodes;
     }
 
     private boolean isWithinSearchEnvelope(Node node) {

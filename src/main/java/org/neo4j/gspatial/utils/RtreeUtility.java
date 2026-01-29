@@ -142,10 +142,16 @@ public class RtreeUtility {
 
     public static class KnnOutput {
         public Node node;
+        public Relationship relationship;
         public double distance;
 
         public KnnOutput(Node node, double distance) {
             this.node = node;
+            this.distance = distance;
+        }
+
+        public KnnOutput(Relationship relationship, double distance) {
+            this.relationship = relationship;
             this.distance = distance;
         }
 
@@ -154,6 +160,9 @@ public class RtreeUtility {
         }
 
         public Node getNode() {
+            if (node == null && relationship != null) {
+                node = relationship.getEndNode();
+            }
             return node;
         }
     }

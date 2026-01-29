@@ -45,8 +45,8 @@ public class SpatialProcedures {
     @Procedure(value = "gspatial.labelOperation")
     @Description("Generic method for spatial operations")
     public Stream<Output> labelOperation(@Name("operation") String operationName,
-                                    @Name("argNameA") String argNameA,
-                                    @Name(value = "argNameB", defaultValue = "") Object argNameB) {
+                                         @Name("argNameA") String argNameA,
+                                         @Name(value = "argNameB", defaultValue = "") Object argNameB) {
         return executeWithLogging(() -> {
             SpatialOperationExecutor operationExecutor = new SpatialOperationExecutor(log, tx);
             if (argNameB.toString().isBlank()) {
@@ -73,10 +73,9 @@ public class SpatialProcedures {
     @Description("Query method for Knn operations")
     public Stream<RtreeUtility.KnnOutput> knnQuery(@Name(value = "SpatialSetLabels", defaultValue = "[]") List<String> spatialSetLabels,
                                                    @Name(value = "args", defaultValue = "[]") List<Object> args,
-                                                   @Name(value = "disconnect", defaultValue = "false") Boolean disconnect,
-                                                   @Name(value = "cypherQuery", defaultValue = "") String cypherQuery) {
+                                                   @Name(value = "disconnect", defaultValue = "false") Boolean disconnect) {
         return executeWithLogging(() -> {
-            RtreeQueryExecutor indexQueryExecutor = new RtreeQueryExecutor(log, tx, spatialSetLabels, cypherQuery, disconnect);
+            RtreeQueryExecutor indexQueryExecutor = new RtreeQueryExecutor(log, tx, spatialSetLabels, disconnect);
             return indexQueryExecutor.executeOperation("knn", args).map(RtreeUtility.KnnOutput.class::cast);
         });
     }
@@ -85,10 +84,9 @@ public class SpatialProcedures {
     @Description("Query method for Range operations")
     public Stream<RtreeUtility.RangeOutput> rangeQuery(@Name(value = "SpatialSetLabels", defaultValue = "[]") List<String> spatialSetLabels,
                                                        @Name(value = "args", defaultValue = "[]") List<Object> args,
-                                                       @Name(value = "disconnect", defaultValue = "false") Boolean disconnect,
-                                                       @Name(value = "cypherQuery", defaultValue = "") String cypherQuery) {
+                                                       @Name(value = "disconnect", defaultValue = "false") Boolean disconnect) {
         return executeWithLogging(() -> {
-            RtreeQueryExecutor indexQueryExecutor = new RtreeQueryExecutor(log, tx, spatialSetLabels, cypherQuery, disconnect);
+            RtreeQueryExecutor indexQueryExecutor = new RtreeQueryExecutor(log, tx, spatialSetLabels, disconnect);
             return indexQueryExecutor.executeOperation("range", args).map(RtreeUtility.RangeOutput.class::cast);
         });
     }
@@ -97,10 +95,9 @@ public class SpatialProcedures {
     @Description("Query method for Join operations")
     public Stream<RtreeUtility.JoinOutput> joinQuery(@Name(value = "SpatialSetLabels", defaultValue = "[]") List<String> spatialSetLabels,
                                                      @Name(value = "args", defaultValue = "[]") List<Object> args,
-                                                     @Name(value = "disconnect", defaultValue = "false") Boolean disconnect,
-                                                     @Name(value = "cypherQuery", defaultValue = "") String cypherQuery) {
+                                                     @Name(value = "disconnect", defaultValue = "false") Boolean disconnect) {
         return executeWithLogging(() -> {
-            RtreeQueryExecutor indexQueryExecutor = new RtreeQueryExecutor(log, tx, spatialSetLabels, cypherQuery, disconnect);
+            RtreeQueryExecutor indexQueryExecutor = new RtreeQueryExecutor(log, tx, spatialSetLabels, disconnect);
             return indexQueryExecutor.executeOperation("join", args).map(RtreeUtility.JoinOutput.class::cast);
         });
     }
@@ -121,7 +118,7 @@ public class SpatialProcedures {
     public Stream<RtreeUtility.RangeOutput> StrTreeRangeQuery(@Name("spatialSetLabel") List<String> spatialSetLabels,
                                                               @Name("args") List<Object> args) {
         return executeWithLogging(() -> {
-            StrTreeQueryExecutor executor = new StrTreeQueryExecutor(tx, spatialSetLabels);
+            StrTreeQueryExecutor executor = new StrTreeQueryExecutor(log, tx, spatialSetLabels);
             return executor.executeQuery(args);
         });
     }

@@ -4,6 +4,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.traversal.*;
+import org.neo4j.gspatial.constants.SpatialConstants;
 import org.neo4j.gspatial.index.rtree.filter.SearchFilter;
 import org.neo4j.gspatial.index.rtree.filter.SearchResults;
 import org.neo4j.kernel.impl.traversal.MonoDirectionalTraversalDescription;
@@ -37,6 +38,7 @@ public class RTreeIndex implements SpatialIndexWriter, Configurable {
     private int maxNodeReferences;
     private String splitMode = GREENES_SPLIT;
     private boolean shouldMergeTrees = false;
+    private static final String uuid = SpatialConstants.UUIDNAME.getValue();
 
     private int totalGeometryCount = 0;
     private int totalIndexCount = 0;
@@ -118,6 +120,10 @@ public class RTreeIndex implements SpatialIndexWriter, Configurable {
 
     @Override
     public void add(Transaction tx, Node geomNode) {
+        // Skip if already indexed
+        if (isGeometryNodeIndexed(geomNode)) {
+            return;
+        }
         // initialize the search with root
         Node parent = getIndexRoot(tx);
         addBelow(tx, parent, geomNode);
@@ -176,14 +182,21 @@ public class RTreeIndex implements SpatialIndexWriter, Configurable {
      */
     @Override
     public void add(Transaction tx, List<Node> geomNodes) {
+        // Filter out already indexed nodes
+        List<Node> nodesToIndex = geomNodes.stream()
+                .filter(node -> !isGeometryNodeIndexed(node))
+                .collect(Collectors.toList());
+        if (nodesToIndex.isEmpty()) {
+            return;
+        }
         Node rootNode = getIndexRoot(tx);
         //If the insertion is large relative to the size of the tree, simply rebuild the whole tree.
-        if (geomNodes.size() > totalGeometryCount * 0.4) {
-            List<Node> nodesToAdd = new ArrayList<>(geomNodes.size() + totalGeometryCount);
+        if (nodesToIndex.size() > totalGeometryCount * 0.4) {
+            List<Node> nodesToAdd = new ArrayList<>(nodesToIndex.size() + totalGeometryCount);
             for (Node n : getAllIndexedNodes(tx)) {
                 nodesToAdd.add(n);
             }
-            nodesToAdd.addAll(geomNodes);
+            nodesToAdd.addAll(nodesToIndex);
             detachGeometryNodes(tx, false, rootNode, new NullListener());
             deleteTreeBelow(rootNode);
             buildRtreeFromScratch(tx, rootNode, decodeGeometryNodeEnvelopes(nodesToAdd), 0.7);
@@ -192,9 +205,9 @@ public class RTreeIndex implements SpatialIndexWriter, Configurable {
             monitor.addNbrRebuilt(this, tx);
         } else {
 
-            List<NodeWithEnvelope> outliers = bulkInsertion(tx, rootNode, getHeight(rootNode, 0), decodeGeometryNodeEnvelopes(geomNodes), 0.7);
+            List<NodeWithEnvelope> outliers = bulkInsertion(tx, rootNode, getHeight(rootNode, 0), decodeGeometryNodeEnvelopes(nodesToIndex), 0.7);
             countSaved = false;
-            totalGeometryCount = totalGeometryCount + (geomNodes.size() - outliers.size());
+            totalGeometryCount = totalGeometryCount + (nodesToIndex.size() - outliers.size());
             for (NodeWithEnvelope n : outliers) {
                 add(tx, n.node);
             }
@@ -557,6 +570,46 @@ public class RTreeIndex implements SpatialIndexWriter, Configurable {
             }
         }
         if (geomNode != null && isGeometryNodeIndexed(geomNode)) {
+
+            Node indexNode = findLeafContainingGeometryNode(geomNode);
+
+            // be sure geomNode is inside this RTree
+            if (isIndexNodeInThisIndex(tx, indexNode)) {
+
+                // remove the entry
+                final Relationship geometryRtreeReference = geomNode.getSingleRelationship(RTreeRelationshipTypes.RTREE_REFERENCE, Direction.INCOMING);
+                if (geometryRtreeReference != null) {
+                    geometryRtreeReference.delete();
+                }
+                if (deleteGeomNode) {
+                    deleteNode(geomNode);
+                }
+
+                // reorganize the tree if needed
+                if (countChildren(indexNode, RTreeRelationshipTypes.RTREE_REFERENCE) == 0) {
+                    indexNode = deleteEmptyTreeNodes(indexNode, RTreeRelationshipTypes.RTREE_REFERENCE);
+                    adjustParentBoundingBox(indexNode, RTreeRelationshipTypes.RTREE_CHILD);
+                } else {
+                    adjustParentBoundingBox(indexNode, RTreeRelationshipTypes.RTREE_REFERENCE);
+                }
+
+                adjustPathBoundingBox(indexNode);
+
+                countSaved = false;
+                totalGeometryCount--;
+            } else if (throwExceptionIfNotFound) {
+                throw new RuntimeException("GeometryNode not indexed in this RTree: " + geomNodeId);
+            }
+        } else if (throwExceptionIfNotFound) {
+            throw new RuntimeException("GeometryNode not indexed with an RTree: " + geomNodeId + "\ngeomNode is " + geomNode + "\nresult is " + result);
+        }
+    }
+
+    @Override
+    public void remove(Transaction tx, Node geomNode, boolean deleteGeomNode, boolean throwExceptionIfNotFound) {
+        String geomNodeId = geomNode.getProperty(uuid).toString();
+        Result result = null;
+        if (isGeometryNodeIndexed(geomNode)) {
 
             Node indexNode = findLeafContainingGeometryNode(geomNode);
 

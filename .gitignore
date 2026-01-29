@@ -1,3 +1,14 @@
-target/
+# Gradle
+build/
+.gradle/
+
+# IDE
 .idea/
 .vscode/
+*.iml
+
+# Maven (legacy)
+target/
+
+# Environment variables
+.env

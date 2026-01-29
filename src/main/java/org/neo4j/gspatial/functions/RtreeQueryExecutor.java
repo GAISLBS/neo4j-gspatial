@@ -15,12 +15,10 @@ public class RtreeQueryExecutor {
     private final Transaction tx;
     private final Log log;
     private final List<Node> layers = new LinkedList<>();
-    private final String cypherQuery;
 
-    public RtreeQueryExecutor(Log log, Transaction tx, List<String> spatialSetLabels, String cypherQuery, Boolean disconnect) {
+    public RtreeQueryExecutor(Log log, Transaction tx, List<String> spatialSetLabels, Boolean disconnect) {
         this.tx = tx;
         this.log = log;
-        this.cypherQuery = cypherQuery;
         spatialSetLabels.forEach(label -> {
             String RtreeLabel = label + (disconnect ? "ComparisonRTree" : "RTree");
             layers.add(RtreeUtility.getLayer(tx, RtreeLabel));
@@ -35,7 +33,7 @@ public class RtreeQueryExecutor {
             ProgressLoggingListener progressListener = new ProgressLoggingListener(queryType, System.out, RtreeUtility.getMetas(layers, query));
             progressListener.setTimeWait(1);
             progressListener.begin(6);
-            Stream<?> results = query.execute(tx, layers, args, cypherQuery, log, progressListener);
+            Stream<?> results = query.execute(tx, layers, args, log, progressListener);
             progressListener.worked(1);
             progressListener.done();
             return results;

@@ -16,8 +16,7 @@ public final class RtreeOperationConstants {
         }),
         DELETE((index, tx, args) -> {
             for (Node node : args) {
-                String geomNodeIdx = node.getProperty("idx").toString();
-                index.remove(tx, geomNodeIdx, false, true);
+                index.remove(tx, node, false, true);
             }
             return String.format("Deleted %d nodes", args.size());
         });
