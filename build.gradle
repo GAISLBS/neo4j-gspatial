@@ -3,9 +3,9 @@ plugins {
     id 'com.gradleup.shadow' version '8.3.5'
 }
 
-group = 'gspatial'
+group = 'neo4j-gspatial'
 version = '1.1.0'
-description = 'Spatial Operations in Neo4j by wkt form geometries'
+description = 'Spatial Operations/Indexing in Neo4j by wkt/wkb from geometries'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -69,7 +69,7 @@ test {
 }
 
 shadowJar {
-    archiveBaseName.set('gspatial')
+    archiveBaseName.set('neo4j-gspatial')
     archiveClassifier.set('')
     
     // Relocations

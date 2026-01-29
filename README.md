@@ -162,7 +162,7 @@ Available operations:
 ### SGIR-Tree Spatial Index Operations
 ※ Before building the SGIR-Tree, you must set a UNIQUE constraint on the UUID property for each node label.
 ```cypher
-CREATE CONSTRAINT node_type1_uuid_unique IF NOT EXISTS FOR (n:NodeType1) REQUIRE n.uuid IS UNIQUE
+CREATE CONSTRAINT node_type1_idx_unique IF NOT EXISTS FOR (n:NodeType1) REQUIRE n.idx IS UNIQUE
 ```
 
 #### Creating or Update Index
@@ -178,7 +178,7 @@ When your spatial data changes, you need to update the index:
 ```cypher
 // Delete specific nodes from index
 MATCH (n:NodeType1)
-WHERE n.uuid IN ["uuid1", "uuid2"]
+WHERE n.idx IN ["idx1", "idx2"]
 WITH COLLECT(n) AS delete_nodes
 CALL gspatial.rtree("delete", delete_nodes, "NodeType1") YIELD result
 RETURN result
@@ -194,7 +194,7 @@ CALL gspatial.rtree.query.range(
     [126.9776747745794, 127.003822009184, 37.48940647166388, 37.5139237487866]
 )
 YIELD node
-RETURN node.uuid
+RETURN node.idx
 ```
 
 2. Buffer Query (circular range):
@@ -207,7 +207,7 @@ YIELD node
 
 MATCH (node)-[:HAS_COLOUR]->(c:Colour)
   WHERE c.name = 'beige'
-RETURN node.uuid
+RETURN node.idx
 ```
 
 #### KNN Query
@@ -217,7 +217,7 @@ CALL gspatial.rtree.query.knn(
     [[127.003822009184, 37.48940647166388], 5]  // point and k value
 )
 YIELD node, distance
-RETURN node.uuid AS n_uuid, distance
+RETURN node.idx AS n_idx, distance
   ORDER BY distance ASC
 ```
 
